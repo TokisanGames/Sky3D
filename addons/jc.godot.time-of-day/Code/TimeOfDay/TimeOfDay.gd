@@ -180,13 +180,29 @@ func _init() -> void:
 	set_longitude(longitude)
 	set_utc(utc)
 
+signal time_update(TimeOfDay)
+export var update_interval: float = 0.1
+var _last_update: int = 0
+
+
 func _ready() -> void:
 	set_dome_path(dome_path)
 
-func _process(delta) -> void:
+	var timer := Timer.new()
+	timer.name = "Timer"
+	add_child(timer)
+	timer.connect("timeout", self, "_on_timeout")
+	timer.wait_time = update_interval
+	timer.stop()
+	_last_update = OS.get_ticks_msec()
+
+
+func _on_timeout() -> void:
 	if Engine.editor_hint:
 		return
 	
+	var delta: float = .001 * (OS.get_ticks_msec() - _last_update)
+
 	if not system_sync:
 		__time_process(delta)
 		__repeat_full_cycle()
@@ -198,6 +214,20 @@ func _process(delta) -> void:
 	if __celestials_update_timer > celestials_update_time:
 		__set_celestial_coords()
 		__celestials_update_timer = 0.0
+
+	emit_signal("time_update", self)
+	_last_update = OS.get_ticks_msec()
+	
+
+func pause() -> void:
+	$Timer.stop()
+
+
+func resume() -> void:
+	_last_update = OS.get_ticks_msec() - update_interval
+	$Timer.start()
+	
+
 
 # DateTime
 #----------------------------------------------------------

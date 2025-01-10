@@ -103,6 +103,7 @@ func set_show_physical_sky(value: bool) -> void:
 @export_range(0.0, 24.0) var current_time: float = 8.0 : set = set_current_time
 @export_range(-1440,1440,1) var minutes_per_day: float = 15.0 : set = set_minutes_per_day
 @export_range(0.016, 10.0) var update_interval: float = 0.1 : set = set_update_interval
+@export var manual_time_management: bool = false : set = set_manual_time_management;
 var _is_day: bool = true
 
 
@@ -151,9 +152,17 @@ func set_update_interval(value:float) -> void:
 	if tod:
 		tod.update_interval = value
 
+func set_manual_time_management(value:bool) -> void:
+	manual_time_management = value
+	if tod:
+		tod._manual_time_management = value
+
+func manual_time_update() -> void:
+	if tod:
+		tod.manual_time_update()
 
 func _on_timeofday_updated(time: float) -> void:
-	if tod and Engine.is_editor_hint():
+	if tod and (Engine.is_editor_hint() or manual_time_management):
 		minutes_per_day = tod.total_cycle_in_minutes
 		current_time = tod.total_hours
 		update_interval = tod.update_interval

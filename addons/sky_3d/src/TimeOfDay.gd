@@ -13,12 +13,15 @@ signal year_changed(value)
 
 var _update_timer: Timer
 var _last_update: int = 0
+var _manual_time_management: bool = false
 
+func is_editor_hint_or_manual() -> bool:
+	return Engine.is_editor_hint() or _manual_time_management
 
 @export var update_in_game: bool = true :
 	set(value):
 		update_in_game = value
-		if not Engine.is_editor_hint():
+		if not is_editor_hint_or_manual():
 			if update_in_game:
 				resume()
 			else:
@@ -28,7 +31,7 @@ var _last_update: int = 0
 @export var update_in_editor: bool = true :
 	set(value):
 		update_in_editor = value
-		if Engine.is_editor_hint():
+		if is_editor_hint_or_manual():
 			if update_in_editor:
 				resume()
 			else:
@@ -63,6 +66,11 @@ func _ready() -> void:
 	_update_timer.wait_time = update_interval
 	resume()
 
+func manual_time_update() -> void:
+	__time_process(0)
+	__repeat_full_cycle()
+	__check_cycle()
+	__set_celestial_coords()
 
 func _on_timeout() -> void:
 	var delta: float = .001 * (Time.get_ticks_msec() - _last_update)
@@ -91,8 +99,8 @@ func resume() -> void:
 	if is_instance_valid(_update_timer):
 		# Assume resuming from a pause, so timer only gets one tick
 		_last_update = Time.get_ticks_msec() - update_interval
-		if (Engine.is_editor_hint() and update_in_editor) or \
-				(not Engine.is_editor_hint() and update_in_game):
+		if (is_editor_hint_or_manual() and update_in_editor) or \
+				(not is_editor_hint_or_manual() and update_in_game):
 			_update_timer.start()
 
 
@@ -130,28 +138,28 @@ var year: int = 2025: set = set_year
 func set_total_hours(value: float) -> void:
 	total_hours = value
 	emit_signal("time_changed", value)
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 
 
 func set_day(value: int) -> void:
 	day = value 
 	emit_signal("day_changed", value)
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 
 
 func set_month(value: int) -> void:
 	month = value 
 	emit_signal("month_changed", value)
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 
 
 func set_year(value: int) -> void:
 	year = value 
 	emit_signal("year_changed", value)
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 
 
@@ -211,45 +219,45 @@ var __moon_orbital_elements := OrbitalElements.new()
 
 func set_celestials_calculations(value: int) -> void:
 	celestials_calculations = value
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 	notify_property_list_changed()
 	
 
 func set_latitude(value: float) -> void:
 	latitude = value
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 
 
 func set_longitude(value: float) -> void:
 	longitude = value
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 
 
 func set_utc(value: float) -> void:
 	utc = value
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 
 
 func set_compute_moon_coords(value: bool) -> void:
 	compute_moon_coords = value
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 	notify_property_list_changed()
 	
 
 func set_compute_deep_space_coords(value: bool) -> void:
 	compute_deep_space_coords = value
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 
 
 func set_moon_coords_offset(value: Vector2) -> void:
 	moon_coords_offset = value
-	if Engine.is_editor_hint():
+	if is_editor_hint_or_manual():
 		__set_celestial_coords()
 
 

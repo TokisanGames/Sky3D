@@ -375,7 +375,6 @@ const _clouds_texture: Texture2D = preload("res://addons/sky_3d/assets/resources
 const _clouds_cumulus_texture: Texture2D = preload("res://addons/sky_3d/assets/textures/noiseClouds.png")
 
 # Skydome
-const MAX_EXTRA_CULL_MARGIN: float = 16384.0
 const DEFAULT_POSITION:= Vector3(0.0000001, 0.0000001, 0.0000001)
 
 # Coords

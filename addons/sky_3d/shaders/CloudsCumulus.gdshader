@@ -195,4 +195,5 @@ void fragment(){
 	
 	ALBEDO = clouds.rgb;
 	ALPHA = pow3(clouds.a);
+	DEPTH = 0.0;
 }

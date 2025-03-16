@@ -187,7 +187,15 @@ void vertex(){
 
 void fragment(){
 	float depthRaw = texture(DEPTH_TEXTURE, SCREEN_UV).r;
-
+    #ifndef CURRENT_RENDERER
+    // For 4.3 or earlier, will break if far plane is less than 1m.
+    depthRaw = PROJECTION_MATRIX[3][2] > PROJECTION_MATRIX[2][2] ? depthRaw : depthRaw * 2.0 - 1.0;
+    #else
+    #if CURRENT_RENDERER == RENDERER_COMPATIBILITY
+    depthRaw = depthRaw * 2.0 - 1.0;
+    #endif
+    #endif
+	
 	vec3 view; vec3 worldPos;
 	computeCoords(SCREEN_UV, depthRaw, camera_matrix, INV_PROJECTION_MATRIX, view, worldPos);
 	worldPos = normalize(worldPos);

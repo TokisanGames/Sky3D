@@ -1,15 +1,13 @@
 [gd_scene load_steps=5 format=3 uid="uid://hyy7u72h77"]
 
-[ext_resource type="Shader" path="res://addons/sky_3d/shaders/SimpleMoon.gdshader" id="1_h4nhh"]
+[ext_resource type="Shader" uid="uid://bfvpmhy1arv3k" path="res://addons/sky_3d/shaders/SimpleMoon.gdshader" id="1_h4nhh"]
 [ext_resource type="Texture2D" uid="uid://2r8ylu6rg5dp" path="res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png" id="2_fnh72"]
-
-
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_5qbl8"]
 render_priority = 0
 shader = ExtResource("1_h4nhh")
-shader_parameter/_sun_direction = Vector3(-0.976421, -0.0982674, -0.192214)
 shader_parameter/_texture = ExtResource("2_fnh72")
+shader_parameter/_sun_direction = Vector3(-0.976421, -0.0982674, -0.192214)
 
 [sub_resource type="SphereMesh" id="2"]
 

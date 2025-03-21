@@ -12,8 +12,13 @@ config_version=5
 
 config/name="Sky3D"
 run/main_scene="res://demo/Sky3DDemo.tscn"
-config/features=PackedStringArray("4.3")
+config/features=PackedStringArray("4.4")
 config/icon="res://icon.png"
+
+[debug]
+
+gdscript/warnings/untyped_declaration=2
+gdscript/warnings/inferred_declaration=2
 
 [editor_plugins]
 
@@ -31,7 +36,6 @@ common/enable_pause_aware_picking=true
 
 lights_and_shadows/directional_shadow/size=8192
 anti_aliasing/quality/msaa_3d=3
-environment/defaults/default_environment="res://default_env.tres"
 quality/reflections/atlas_size=128
 quality/reflections/atlas_subdiv=1
 quality/filters/use_debanding=true

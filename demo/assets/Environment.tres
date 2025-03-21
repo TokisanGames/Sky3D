@@ -1,17 +1,74 @@
-[gd_resource type="Environment" load_steps=3 format=3 uid="uid://dlo4d1tui6x2k"]
+[gd_resource type="Environment" load_steps=9 format=3 uid="uid://dlo4d1tui6x2k"]
 
-[sub_resource type="PhysicalSkyMaterial" id="PhysicalSkyMaterial_5kgu2"]
-energy_multiplier = 3.0
-use_debanding = false
+[ext_resource type="Shader" uid="uid://mjo3i43h0fwm" path="res://addons/sky_3d/shaders/Sky.gdshader" id="1_scbay"]
+[ext_resource type="Texture2D" uid="uid://c1vwcdcdvb74a" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg" id="2_iuqa4"]
+[ext_resource type="Texture2D" uid="uid://cfqk60lpl5ljv" path="res://addons/sky_3d/assets/resources/SNoise.tres" id="3_073gb"]
+[ext_resource type="Texture2D" uid="uid://djpfuyxkryegn" path="res://addons/sky_3d/assets/textures/noise.jpg" id="4_go3mt"]
+[ext_resource type="Texture2D" uid="uid://bm7dot7t7u1q4" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg" id="5_nk2sh"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_scbay"]
+viewport_path = NodePath(".")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_568mj"]
+render_priority = -128
+shader = ExtResource("1_scbay")
+shader_parameter/_color_correction_params = Vector2(0, 1.3)
+shader_parameter/_ground_color = Color(0.3, 0.3, 0.3, 1)
+shader_parameter/_horizon_level = 0.0
+shader_parameter/_sun_direction = Vector3(-0.760075, 0.626975, -0.170846)
+shader_parameter/_moon_direction = Vector3(-0.489545, -0.867954, 0.0836778)
+shader_parameter/_moon_size = 0.07
+shader_parameter/_moon_matrix = Basis(0, 0.0959632, 0.995385, -0.871978, 0.487286, -0.0469783, -0.489545, -0.867954, 0.0836778)
+shader_parameter/_deep_space_matrix = Basis(0.333882, -0.942615, 0, -0.259821, -0.0920306, -0.961262, 0.906099, 0.320948, -0.275638)
+shader_parameter/_atm_darkness = 0.5
+shader_parameter/_atm_sun_intensity = 18.0
+shader_parameter/_atm_day_tint = Color(0.807843, 0.909804, 1, 1)
+shader_parameter/_atm_horizon_light_tint = Color(0.980392, 0.635294, 0.462745, 1)
+shader_parameter/_atm_night_tint = Color(0, 0, 0, 0)
+shader_parameter/_atm_level_params = Vector3(1, 0, 0)
+shader_parameter/_atm_thickness = 0.7
+shader_parameter/_atm_sun_mie_tint = Color(1, 1, 1, 1)
+shader_parameter/_atm_sun_mie_intensity = 1.0
+shader_parameter/_atm_moon_mie_tint = Color(0.137255, 0.184314, 0.292196, 1)
+shader_parameter/_atm_moon_mie_intensity = 0.0
+shader_parameter/_atm_beta_ray = Vector3(5.80454e-06, 1.35629e-05, 3.31126e-05)
+shader_parameter/_atm_beta_mie = Vector3(3.038e-08, 3.038e-08, 3.038e-08)
+shader_parameter/_atm_sun_partial_mie_phase = Vector3(0.36, 1.64, 1.6)
+shader_parameter/_atm_moon_partial_mie_phase = Vector3(0.36, 1.64, 1.6)
+shader_parameter/_sun_disk_color = Color(0.996094, 0.541334, 0.140076, 1)
+shader_parameter/_sun_disk_intensity = 15.0
+shader_parameter/_sun_disk_size = 0.02
+shader_parameter/_moon_color = Color(1, 1, 1, 1)
+shader_parameter/_moon_texture = SubResource("ViewportTexture_scbay")
+shader_parameter/_background_texture = ExtResource("2_iuqa4")
+shader_parameter/_background_color = Color(0.709804, 0.709804, 0.709804, 0.854902)
+shader_parameter/_stars_field_color = Color(1, 1, 1, 1)
+shader_parameter/_stars_field_texture = ExtResource("5_nk2sh")
+shader_parameter/_stars_scintillation = 0.75
+shader_parameter/_stars_scintillation_speed = 0.01
+shader_parameter/_noise_tex = ExtResource("4_go3mt")
+shader_parameter/_clouds_coverage = 0.627
+shader_parameter/_clouds_thickness = 1.7
+shader_parameter/_clouds_absorption = 2.0
+shader_parameter/_clouds_sky_tint_fade = 0.5
+shader_parameter/_clouds_intensity = 10.0
+shader_parameter/_clouds_size = 2.0
+shader_parameter/_clouds_uv = Vector2(0.16, 0.11)
+shader_parameter/_clouds_speed = 0.07
+shader_parameter/_clouds_direction = Vector2(0.25, 0.25)
+shader_parameter/_clouds_day_color = Color(0.823529, 0.87451, 1, 1)
+shader_parameter/_clouds_horizon_light_color = Color(0.98, 0.4312, 0.1568, 1)
+shader_parameter/_clouds_night_color = Color(0.090196, 0.094118, 0.129412, 1)
+shader_parameter/_clouds_texture = ExtResource("3_073gb")
 
 [sub_resource type="Sky" id="Sky_cwklf"]
-sky_material = SubResource("PhysicalSkyMaterial_5kgu2")
+sky_material = SubResource("ShaderMaterial_568mj")
 
 [resource]
 background_mode = 2
 sky = SubResource("Sky_cwklf")
 ambient_light_source = 3
-ambient_light_color = Color(0.538543, 0.366202, 0.27663, 1)
+ambient_light_color = Color(1, 1, 1, 1)
 ambient_light_sky_contribution = 0.85
 reflected_light_source = 2
 tonemap_mode = 3

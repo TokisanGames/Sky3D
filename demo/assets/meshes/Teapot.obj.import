@@ -16,7 +16,10 @@ dest_files=["res://.godot/imported/Teapot.obj-f27c075716327a0913343bf5d2645d45.m
 [params]
 
 generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
 scale_mesh=Vector3(0.5, 0.5, 0.5)
 offset_mesh=Vector3(0, 0, 0)
-optimize_mesh=true
 force_disable_mesh_compression=false

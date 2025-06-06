@@ -396,6 +396,31 @@ func set_ambient_tween_time(value: float) -> void:
 
 
 #####################
+## Overlays
+#####################
+
+@export_group("Overlays")
+
+
+## Overlays a grid pole aligned with the zenith.
+@export var show_azimuthal_grid: bool = false: set = set_azimuthal_grid
+
+func set_azimuthal_grid(value: bool) -> void:
+	if sky:
+		show_azimuthal_grid = value
+		sky.set_azimuthal_grid(value)
+
+
+## Overlays a grid pole aligned with Polaris.
+@export var show_equatorial_grid: bool = false: set = set_equatorial_grid
+
+func set_equatorial_grid(value: bool) -> void:
+	if sky:
+		show_equatorial_grid = value
+		sky.set_equatorial_grid(value)
+	
+
+#####################
 ## Setup
 #####################
 

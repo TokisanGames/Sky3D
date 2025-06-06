@@ -15,6 +15,10 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_v8wrf"]
 shader = ExtResource("4_v8wrf")
 shader_parameter/_sky_visible = true
+shader_parameter/show_azimuthal_grid = false
+shader_parameter/azimuthal_grid_color = Vector4(0.871, 0.722, 0.529, 1)
+shader_parameter/show_equatorial_grid = false
+shader_parameter/equatorial_grid_color = Vector4(0, 0.75, 1, 1)
 shader_parameter/_color_correction_params = Vector2(0, 1)
 shader_parameter/_ground_color = Color(0.3, 0.3, 0.3, 1)
 shader_parameter/_horizon_level = 0.0
@@ -116,7 +120,8 @@ size = Vector3(2000, 2000, 2000)
 environment = SubResource("Environment_1g8sw")
 camera_attributes = SubResource("CameraAttributesPractical_d0ed4")
 script = ExtResource("2_cejat")
-current_time = 7.0
+current_time = 6.15
+update_interval = 0.016
 metadata/_custom_type_script = "uid://deo0gxkmk2ahd"
 
 [node name="SunLight" type="DirectionalLight3D" parent="Sky3D"]
@@ -142,6 +147,7 @@ clouds_cumulus_coverage = 0.58
 
 [node name="TimeOfDay" type="Node" parent="Sky3D"]
 script = ExtResource("3")
+update_interval = 0.016
 dome_path = NodePath("../Skydome")
-total_hours = 7.74189
+total_hours = 6.15
 day = 4

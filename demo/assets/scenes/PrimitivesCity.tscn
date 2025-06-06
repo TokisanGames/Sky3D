@@ -1,6 +1,7 @@
-[gd_scene load_steps=21 format=3 uid="uid://dipn6t27p0nap"]
+[gd_scene load_steps=22 format=3 uid="uid://dipn6t27p0nap"]
 
 [ext_resource type="PackedScene" uid="uid://bjmikbn4ac2lu" path="res://demo/assets/scenes/BuildingBlocks.tscn" id="1"]
+[ext_resource type="PackedScene" uid="uid://1ev4o7q8l4ey" path="res://demo/assets/meshes/Compass.tscn" id="2_gjkdl"]
 [ext_resource type="Texture2D" uid="uid://hl8w41k0t8ia" path="res://demo/assets/textures/ProtGrid0.jpg" id="8"]
 [ext_resource type="ArrayMesh" uid="uid://d137osfsks6c" path="res://demo/assets/meshes/Teapot.obj" id="9"]
 [ext_resource type="ArrayMesh" uid="uid://cr4asb0j76cfa" path="res://demo/assets/meshes/KnotTorus.obj" id="10"]
@@ -84,105 +85,121 @@ emission = Color(0.054902, 0.564706, 0.972549, 1)
 emission_energy_multiplier = 5.0
 
 [node name="PrimitivesCity" type="Node3D"]
-transform = Transform3D(0.300706, 0, 0.953717, 0, 1, 0, -0.953717, 0, 0.300706, 0, 0, 0)
 
 [node name="Floor" type="MeshInstance3D" parent="."]
-transform = Transform3D(2000, 0, 0, 0, 1, 0, 0, 0, 2000, 0, 0, -137.175)
+transform = Transform3D(2000, 0, 0, 0, 1, 0, 0, 0, 2000, 0, 0, 0)
 layers = 4
 material_override = SubResource("1")
 mesh = SubResource("2")
 
-[node name="Sphere0" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1.1032, 0)
+[node name="Compass" parent="." instance=ExtResource("2_gjkdl")]
+
+[node name="Props" type="Node3D" parent="."]
+
+[node name="Sphere0" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 4)
 material_override = SubResource("3")
 mesh = SubResource("4")
+skeleton = NodePath("../..")
 
-[node name="Sphere1" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1032, 0)
+[node name="Sphere1" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 2)
 material_override = SubResource("5")
 mesh = SubResource("4")
+skeleton = NodePath("../..")
 
-[node name="Sphere2" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.1032, 0)
+[node name="Sphere2" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1, 0)
 material_override = SubResource("6")
 mesh = SubResource("4")
+skeleton = NodePath("../..")
 
-[node name="Teapot" type="MeshInstance3D" parent="."]
-transform = Transform3D(-1, 0, -8.9407e-08, 0, 1, 0, 8.9407e-08, 0, -1, -4.95545, 0, -0.37385)
+[node name="Teapot" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 8, 0, 6.5)
 material_override = SubResource("7")
 mesh = ExtResource("9")
+skeleton = NodePath("../..")
 
-[node name="Teapot2" type="MeshInstance3D" parent="."]
-transform = Transform3D(-1, 0, -8.9407e-08, 0, 1, 0, 8.9407e-08, 0, -1, -7.95545, 0, -0.37385)
+[node name="Teapot2" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 8, 0, 10)
 material_override = SubResource("8")
 mesh = ExtResource("9")
+skeleton = NodePath("../..")
 
-[node name="Teapot3" type="MeshInstance3D" parent="."]
-transform = Transform3D(-1, 0, -8.9407e-08, 0, 1, 0, 8.9407e-08, 0, -1, -10.9555, 0, -0.37385)
+[node name="Teapot3" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 7.96891, 9.53674e-07, 13.998)
 material_override = SubResource("9")
 mesh = ExtResource("9")
+skeleton = NodePath("../..")
 
-[node name="KnotTorusGold" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 5, 1.5258, -0.293104)
+[node name="KnotTorusGold" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 8, 1, -3.5)
 material_override = SubResource("StandardMaterial3D_bvo0c")
 mesh = ExtResource("10")
+skeleton = NodePath("../..")
 
-[node name="KnotTorusMatte" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 9, 1.5258, -0.293104)
+[node name="KnotTorusMatte" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 8, 1, -8)
 material_override = SubResource("StandardMaterial3D_tloy4")
 mesh = ExtResource("10")
+skeleton = NodePath("../..")
 
-[node name="KnotTorusGloss" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 13, 1.5258, -0.293104)
+[node name="KnotTorusGloss" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 8, 1, -13)
 material_override = SubResource("12")
 mesh = ExtResource("10")
+skeleton = NodePath("../..")
 
-[node name="LCylinder" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, -10, 0.992443, -3.65293)
+[node name="LCylinder" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, 0, 1, 13.25)
 material_override = SubResource("13")
 mesh = SubResource("14")
+skeleton = NodePath("../..")
 
-[node name="LCylinder2" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, -3, 0.992443, -10.6529)
+[node name="LCylinder2" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, -6, 1, 6)
 material_override = SubResource("15")
 mesh = SubResource("14")
+skeleton = NodePath("../..")
 
-[node name="LCylinder3" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, 9, 0.992443, -10.6529)
+[node name="LCylinder3" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, -6, 1, -6)
 material_override = SubResource("16")
 mesh = SubResource("14")
+skeleton = NodePath("../..")
 
-[node name="OmniLight3D2" type="OmniLight3D" parent="LCylinder3"]
+[node name="OmniLight3D2" type="OmniLight3D" parent="Props/LCylinder3"]
 transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0)
 light_color = Color(0.054902, 0.564706, 0.972549, 1)
 shadow_enabled = true
 omni_range = 20.0
 
-[node name="LCylinder4" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, 17, 0.992443, -4.65293)
+[node name="LCylinder4" type="MeshInstance3D" parent="Props"]
+transform = Transform3D(0.5, 0, 0, 0, 1, 0, 0, 0, 0.5, 0, 1, -13.25)
 material_override = SubResource("13")
 mesh = SubResource("14")
+skeleton = NodePath("../..")
 
-[node name="OmniLight3D" type="OmniLight3D" parent="LCylinder4"]
+[node name="OmniLight3D" type="OmniLight3D" parent="Props/LCylinder4"]
 transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0)
 light_color = Color(0.972549, 0.505882, 0.054902, 1)
 shadow_enabled = true
 omni_range = 20.0
 
 [node name="Buildings" parent="." instance=ExtResource("1")]
-transform = Transform3D(-8.9407e-08, 0, 1, 0, 1.799, 0, -1.157, 0, -5.96046e-08, -337.683, 0, -850.759)
+transform = Transform3D(-5.05739e-08, 0, 1, 0, 1.799, 0, -1.157, 0, -4.37114e-08, -318, 0, -598.815)
 
 [node name="Buildings2" parent="." instance=ExtResource("1")]
-transform = Transform3D(-1, 0, -1.19209e-07, 0, 1, 0, 1.19209e-07, 0, -1, -337.683, 0, -250.759)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -317.435, 0, 7.93411)
 
 [node name="Buildings3" parent="." instance=ExtResource("1")]
-transform = Transform3D(-1, 0, -1.19209e-07, 0, 1, 0, 1.19209e-07, 0, -1, -337.683, 0, 349.241)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -316.869, 0, 601.186)
 
 [node name="Buildings4" parent="." instance=ExtResource("1")]
-transform = Transform3D(-5.96046e-08, 0, 1, 0, 1, 0, -1, 0, -5.96046e-08, 322.317, 0, -850.759)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 342, 0, -599.437)
 
 [node name="Buildings5" parent="." instance=ExtResource("1")]
-transform = Transform3D(-1, 0, -1.19209e-07, 0, 1, 0, 1.19209e-07, 0, -1, 322.317, 0, -250.759)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 342.565, 0, 15.5)
 
 [node name="Buildings6" parent="." instance=ExtResource("1")]
-transform = Transform3D(-1, 0, -1.78814e-07, 0, 1, 0, 1.78814e-07, 0, -1, 245.857, 0, 351.622)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 266.673, 0, 603.016)

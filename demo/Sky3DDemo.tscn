@@ -15,6 +15,10 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_v8wrf"]
 shader = ExtResource("4_v8wrf")
 shader_parameter/sky_visible = true
+shader_parameter/show_azimuthal_grid = false
+shader_parameter/azimuthal_grid_color = Vector4(0.871, 0.722, 0.529, 1)
+shader_parameter/show_equatorial_grid = false
+shader_parameter/equatorial_grid_color = Vector4(0, 0.75, 1, 1)
 shader_parameter/color_correction_params = Vector2(0, 1)
 shader_parameter/ground_color = Color(0.3, 0.3, 0.3, 1)
 shader_parameter/horizon_level = 0.0

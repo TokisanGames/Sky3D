@@ -5,6 +5,10 @@ shader_type sky;
 render_mode use_debanding;
 
 uniform bool sky_visible = true;
+uniform bool show_azimuthal_grid = false;
+uniform vec4 azimuthal_grid_color = vec4(.871, .722, .529, 1.);
+uniform bool show_equatorial_grid = false;
+uniform vec4 equatorial_grid_color = vec4(0., .75, 1., 1.);
 
 // Color correction
 group_uniforms General;
@@ -486,6 +490,76 @@ vec3 render_sky(vec3 worldPos, vec3 cloudsPos, vec3 sunPosition, vec3 moonPositi
 	return col;
 }
 
+float fwidth_custom(float p) {
+	return length(vec2(dFdx(p), dFdy(p)));
+}
+
+vec4 quaternion_from_axis_angle(vec3 axis, float angle) {
+	float s = sin(angle * 0.5);
+	return vec4(axis * s, cos(angle * 0.5));
+}
+
+vec3 rotate_vector(vec3 v, vec4 q) {
+	vec3 t = 2.0 * cross(q.xyz, v);
+	return v + q.w * t + cross(q.xyz, t);
+}
+
+vec3 align_and_rotate(vec3 dir, vec3 target, float rotation_angle) {
+	vec3 z_axis = vec3(0.0, 0.0, 1.0); // Original grid alignment
+
+	// First, align Z-axis with target (Polaris)
+	target = normalize(target);
+	vec3 axis = cross(z_axis, target);
+	float angle = acos(dot(z_axis, target));
+	if (length(axis) >= 0.0001) {
+		axis = normalize(axis);
+		vec4 align_quat = quaternion_from_axis_angle(axis, angle);
+		dir = rotate_vector(dir, align_quat);
+
+		// Rotate around the new Z-axis (which is now aligned with Polaris)
+		vec4 rot_quat = quaternion_from_axis_angle(vec3(0.0, 0.0, 1.0), rotation_angle);
+		dir = rotate_vector(dir, rot_quat);
+	}
+	return dir;
+}
+
+void draw_grid(vec3 dir, vec3 pole_dir, float rotation_angle, vec4 line_color, float grid_spacing, float line_thickness, inout vec3 color) {
+	float spacing = max(grid_spacing, 0.001);
+	float thickness = max(line_thickness, 0.0001);
+
+	// Rotate dir with sidereal motion and align with pole_dir
+	dir = align_and_rotate(dir, pole_dir, rotation_angle);
+
+	// Latitude / Circles / Theta Spherical coordinates
+	float theta = acos(dir.z);
+	float theta_deriv = fwidth_custom(theta);
+	float circle_thickness = max(thickness, theta_deriv);
+	float circle = mod(theta, spacing);
+	float circle_line = 1.0 - smoothstep(0.0, circle_thickness * 1.5, abs(circle - circle_thickness * 0.5));
+	circle_line *= saturate(thickness / circle_thickness);
+
+	// Add poles	
+	float pole_thickness = circle_thickness;
+	float north_pole = 1.0 - smoothstep(0.0, pole_thickness, theta);
+	float south_pole = 1.0 - smoothstep(0.0, pole_thickness, abs(theta - 3.14159));
+	circle_line = max(circle_line, max(north_pole, south_pole));
+
+	// Darken Lat at poles
+	float circle_adjust = sin(theta);
+	circle_line *= clamp(circle_adjust, 0.2, 1.0);
+
+	// Longitude / Radial lines / Phi Spherical coordinates
+	float phi = atan(dir.y, dir.x);
+	float phi_deriv = fwidth_custom(phi);
+	float radial_thickness = max(thickness, phi_deriv);
+	float radial = mod(phi + 3.14, spacing); // PI w/ less precision to remove moire
+	float radial_line = 1.0 - smoothstep(0.0, radial_thickness * 1.5, abs(radial - radial_thickness));
+	radial_line *= saturate(thickness / radial_thickness);
+
+	float grid = max(radial_line, circle_line);
+	color += line_color.rgb * line_color.a * grid;
+}
+
 void sky() {
 	float current_time = TIME;
 	vec3 col = vec3(0.0); // Set up the initial sky color which will be added to later to produce the final result.
@@ -498,5 +572,22 @@ void sky() {
 	if (sky_visible) {
 		col = render_sky(worldPos, cloudsPos, sunPosition, moonPosition, deep_space_coords, current_time);
 	}
+	
+	// Draw overlay grids
+	{
+		float grid_thickness = 0.0002;
+		float grid_spacing = 0.261799; // 15 degrees
+		vec3 zenith_dir = vec3(0.0, 1.0, 0.0); // Y-axis aligned azimuthal
+		vec3 polaris_dir = normalize(vec3(0.001, 0.0, 1.0)); // TODO Update with position of polaris
+		float sidereal_rate = -TAU / 24.0; // Sidereal rotation: ~15 degrees/hour (2π/24 radians/hour)
+		float rotation_angle = .05 * TIME * sidereal_rate; // TOOD update rotation w/ sky rotation
+		if(show_azimuthal_grid) {
+			draw_grid(EYEDIR, zenith_dir, 0.0, azimuthal_grid_color, grid_spacing, grid_thickness, col);
+		}
+		if(show_equatorial_grid) {
+			draw_grid(EYEDIR, polaris_dir, rotation_angle, equatorial_grid_color, grid_spacing, grid_thickness, col);
+		}
+	}
+
 	COLOR = col.rgb;
 }

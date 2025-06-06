@@ -167,6 +167,7 @@ func _setup_mesh_instance(target: MeshInstance3D, origin: Vector3) -> void:
 @export var ground_color: Color = Color(0.3, 0.3, 0.3, 1.0): set = set_ground_color
 @export var horizon_level: float = 0.0: set = set_horizon_level
 
+
 func set_tonemap_level(value: float) -> void:
 	if value == tonemap_level:
 		return
@@ -189,6 +190,7 @@ func update_color_correction_params() -> void:
 	p.y = exposure
 	sky_material.set_shader_parameter("color_correction_params", p)
 	fog_material.set_shader_parameter("color_correction_params", p)
+
 
 func set_ground_color(value: Color) -> void:
 	if value == ground_color:
@@ -214,8 +216,46 @@ func update_horizon_level() -> void:
 	if !is_scene_built:
 		return
 	sky_material.set_shader_parameter("horizon_level", horizon_level)
+	
+
+#####################
+## Sun Coords
+#####################
+
+@export_group("Overlays")
+@export var show_azimuthal_grid: bool = false: set = set_azimuthal_grid
+@export var azimuthal_grid_color := Color.BURLYWOOD: set = set_azimuthal_color
+@export var show_equatorial_grid: bool = false: set = set_equatorial_grid
+@export var equatorial_grid_color := Color(.0, .75, 1.): set = set_equatorial_color
+
+func set_azimuthal_grid(value: bool) -> void:
+	if !is_scene_built:
+		return
+	show_azimuthal_grid = value
+	sky_material.set_shader_parameter("show_azimuthal_grid", value)
 
 
+func set_azimuthal_color(value: Color) -> void:
+	if !is_scene_built:
+		return
+	azimuthal_grid_color = value
+	sky_material.set_shader_parameter("azimuthal_grid_color", value)
+	
+
+func set_equatorial_grid(value: bool) -> void:
+	if !is_scene_built:
+		return
+	show_equatorial_grid = value
+	sky_material.set_shader_parameter("show_equatorial_grid", value)
+
+
+func set_equatorial_color(value: Color) -> void:
+	if !is_scene_built:
+		return
+	equatorial_grid_color = value
+	sky_material.set_shader_parameter("equatorial_grid_color", value)
+
+		
 #####################
 ## Sun Coords
 #####################

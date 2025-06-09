@@ -20,21 +20,21 @@ var _last_update: int = 0
 #####################
 
 @export_group("Global")
-@export var update_in_game: bool = true :
-	set(value):
-		update_in_game = value
-		if not Engine.is_editor_hint():
-			if update_in_game:
-				resume()
-			else:
-				pause()
-
-
 @export var update_in_editor: bool = true :
 	set(value):
 		update_in_editor = value
 		if Engine.is_editor_hint():
 			if update_in_editor:
+				resume()
+			else:
+				pause()
+
+
+@export var update_in_game: bool = true :
+	set(value):
+		update_in_game = value
+		if not Engine.is_editor_hint():
+			if update_in_game:
 				resume()
 			else:
 				pause()
@@ -56,6 +56,7 @@ func _init() -> void:
 	set_latitude(latitude)
 	set_longitude(longitude)
 	set_utc(utc)
+	_update_game_datetime()
 
 
 func _ready() -> void:
@@ -113,6 +114,10 @@ func set_dome_path(value: NodePath) -> void:
 #####################
 
 @export_group("DateTime")
+@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
+var game_date: String = ""
+@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
+var game_time: String = ""
 @export var system_sync: bool = false
 @export var total_cycle_in_minutes: float = 15.0
 @export_range(0.,23.99) var total_hours: float = 7.0 : set = set_total_hours
@@ -132,6 +137,7 @@ func set_total_hours(value: float) -> void:
 			total_hours += 24
 			day -= 1
 		emit_signal("time_changed", total_hours)
+		_update_game_datetime()
 		_update_celestial_coords()
 
 
@@ -145,6 +151,7 @@ func set_day(value: int) -> void:
 			month -= 1
 			day += max_days_per_month()
 		emit_signal("day_changed", day)
+		_update_game_datetime()
 		_update_celestial_coords()
 
 
@@ -158,6 +165,7 @@ func set_month(value: int) -> void:
 			month += 12
 			year -= 1
 		emit_signal("month_changed", month)
+		_update_game_datetime()
 		_update_celestial_coords()
 
 
@@ -165,6 +173,7 @@ func set_year(value: int) -> void:
 	if year != value:
 		year = value
 		emit_signal("year_changed", year)
+		_update_game_datetime()
 		_update_celestial_coords()
 
 
@@ -318,6 +327,12 @@ func _get_date_time_os() -> void:
 	set_day(date_time_os.day)
 	set_month(date_time_os.month)
 	set_year(date_time_os.year)
+	
+	
+func _update_game_datetime() -> void:
+	var datetime_dict: Dictionary = get_datetime_dict()
+	game_date = "%d-%02d-%02d" % [datetime_dict["year"], datetime_dict["month"], datetime_dict["day"]]
+	game_time = "%02d:%02d:%02d" % [datetime_dict["hour"], datetime_dict["minute"], datetime_dict["second"]]
 
 
 #####################

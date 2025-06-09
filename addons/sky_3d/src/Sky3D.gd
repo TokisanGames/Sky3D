@@ -126,6 +126,16 @@ func show_sky() -> void:
 @export_group("Time")
 
 
+## Readable game date string, eg. '2025-01-01'.
+@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
+var game_date: String = ""
+
+
+## Readable game time string, e.g. '08:00:00'.
+@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
+var game_time: String = ""
+
+
 ## Move time forward in the editor.
 @export var enable_editor_time: bool = true : set = set_editor_time_enabled
 
@@ -207,7 +217,14 @@ func _on_timeofday_updated(time: float) -> void:
 		minutes_per_day = tod.total_cycle_in_minutes
 		current_time = tod.total_hours
 		update_interval = tod.update_interval
+	_update_game_datetime()
 	update_day_night()
+	
+	
+func _update_game_datetime() -> void:
+	if tod:
+		game_date = tod.game_date
+		game_time = tod.game_time
 
 
 ## Recalculates if it's currently day or night. Adjusts night ambient light if changing state or forced.

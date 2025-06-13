@@ -350,7 +350,7 @@ func update_sun_coords() -> void:
 @export_node_path("DirectionalLight3D") var moon_light_path: NodePath = NodePath("../MoonLight"): set = set_moon_light_path
 @export var moon_light_energy: float = 0.3: set = set_moon_light_energy
 @export var moon_color: Color = Color.WHITE: set = set_moon_color
-@export var moon_size: float = 0.07: set = set_moon_size
+@export_range(0., .999) var moon_size: float = 0.07: set = set_moon_size
 @export var moon_light_color: Color = Color(0.572549, 0.776471, 0.956863, 1.0): set = set_moon_light_color
 @export_range(-180.0, 180.0, 0.00001) var moon_azimuth: float = 5.0: set = set_moon_azimuth
 @export_range(-180.0, 180.0, 0.00001) var moon_altitude: float = -80.0: set = set_moon_altitude

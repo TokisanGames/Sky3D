@@ -423,7 +423,7 @@ vec3 render_sky(vec3 worldPos, vec3 cloudsPos, vec3 sunPosition, vec3 moonPositi
 
 	// Moon-Moon
 	float moon_intersect = sphere_intersect(worldPos, moonPosition, moon_size);
-	float moon_mask = moon_intersect > -0.997 ? 1.0 : 0.0;
+	float moon_mask = moon_intersect > (-1. + sqrt(moon_size)) ? 1.0 : 0.0;
 	vec3 moon_normal = normalize(worldPos * moon_intersect - moonPosition);
 
 	float moon_ndotl = clamp(dot(moon_normal, sunPosition), 0.0, 1.0);

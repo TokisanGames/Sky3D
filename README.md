@@ -8,10 +8,10 @@ A dynamic day/night cycle for Godot Engine 4, written in GDScript.
 
 ## Features
 
-* Supports Godot 4.3+, Forward and Mobile renderers (Not Compatibility yet)
+* Supports Godot 4.3+, Forward, Mobile, and Compatibility renderers
 * Automatically rotating sun, moon, and stars, with moon phases
 * Dynamic atmosphere, fog, and clouds that change with the day cycle
-* Consolidated controls to adjust lighting and camera exposure
+* Consolidated controls to manage lighting and camera exposure
 * Management of game time: current time, day length, day or night
 
 

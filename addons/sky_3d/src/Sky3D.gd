@@ -358,6 +358,8 @@ func set_auto_exposure_min(value: float) -> void:
 	if camera_attributes:
 		auto_exposure_min = value
 		camera_attributes.auto_exposure_min_sensitivity = value
+		if value > auto_exposure_max:
+			set_auto_exposure_max(value)
 
 
 ## Sets CameraAttributesPractical.auto_exposure_max_sensitivity.
@@ -367,6 +369,8 @@ func set_auto_exposure_max(value: float) -> void:
 	if camera_attributes:
 		auto_exposure_max = value
 		camera_attributes.auto_exposure_max_sensitivity = value
+		if value < auto_exposure_min:
+			set_auto_exposure_min(value)
 
 
 ## Sets CameraAttributes.auto_exposure_speed.

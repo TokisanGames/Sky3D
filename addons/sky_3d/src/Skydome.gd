@@ -143,7 +143,7 @@ func build_scene() -> void:
 	fog_mesh.mesh = fog_screen_quad
 	fog_material = ShaderMaterial.new()
 	fog_material.shader = Sky3D.fog_shader
-	fog_material.render_priority = 127
+	fog_material.render_priority = fog_render_priority
 	fog_mesh.material_override = fog_material
 	_setup_mesh_instance(fog_mesh, Vector3.ZERO)
 	add_child(fog_mesh)
@@ -722,7 +722,7 @@ func fog_atm_night_intensity() -> float:
 @export_exp_easing() var fog_mie_depth: float = 0.0001: set = set_fog_mie_depth
 @export_range(0.0, 5000.0) var fog_falloff: float = 3.0: set = set_fog_falloff
 @export_flags_3d_render var fog_layers: int = 524288: set = set_fog_layers
-@export var fog_render_priority: int = 123: set = set_fog_render_priority
+@export var fog_render_priority: int = 100: set = set_fog_render_priority
 
 func set_fog_visible(value: bool) -> void:
 	if value == fog_visible:

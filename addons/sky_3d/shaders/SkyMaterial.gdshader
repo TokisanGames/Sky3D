@@ -169,7 +169,9 @@ mat3 rotationMatrix(vec3 r) {
 }
 
 vec2 equirectUV(vec3 norm) {
-	return vec2((atan(norm.y, norm.x) + PI) / TAU, acos(norm.z) / -PI);
+	float u = (atan(norm.y, norm.x) + PI) / TAU; // 0 to 1 horizontally
+    float v = acos(norm.z) / PI; // 0 (north pole) to 1 (south pole)
+    return vec2(u, v);
 }
 
 vec3 get_moon_texture_equirectUV(vec3 dir) {
@@ -538,7 +540,7 @@ void draw_grid(vec3 dir, vec3 pole_dir, float rotation_angle, vec4 line_color, f
 	float circle_line = 1.0 - smoothstep(0.0, circle_thickness * 1.5, abs(circle - circle_thickness * 0.5));
 	circle_line *= saturate(thickness / circle_thickness);
 
-	// Add poles	
+	// Add poles
 	float pole_thickness = circle_thickness;
 	float north_pole = 1.0 - smoothstep(0.0, pole_thickness, theta);
 	float south_pole = 1.0 - smoothstep(0.0, pole_thickness, abs(theta - 3.14159));
@@ -572,7 +574,7 @@ void sky() {
 	if (sky_visible) {
 		col = render_sky(worldPos, cloudsPos, sunPosition, moonPosition, deep_space_coords, current_time);
 	}
-	
+
 	// Draw overlay grids
 	{
 		float grid_thickness = 0.0002;

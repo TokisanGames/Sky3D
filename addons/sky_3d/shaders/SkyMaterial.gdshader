@@ -249,7 +249,9 @@ float rayleighPhase(float mu) {
 }
 
 float miePhase(float mu, vec3 partial) {
-	return (4.0 * PI) * (partial.x) * (pow(partial.y - partial.z * mu, -1.5));
+	float denominator = partial.y - partial.z * mu;
+	float safe_denominator = max(denominator, 0.0001); // Prevent division by zero
+	return (4.0 * PI) * (partial.x) * (pow(safe_denominator, -1.5));
 }
 
 // Simplifield for more performance

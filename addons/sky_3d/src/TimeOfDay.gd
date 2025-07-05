@@ -98,13 +98,13 @@ func resume() -> void:
 ## Target
 #####################
 
-var _sky_dome: Skydome = null
+var _sky_dome: Skydome
 @export var dome_path: NodePath: set = set_dome_path
 
 
 func set_dome_path(value: NodePath) -> void:
 	dome_path = value
-	if value != null:
+	if value:
 		_sky_dome = get_node_or_null(value)
 	_update_celestial_coords()
 

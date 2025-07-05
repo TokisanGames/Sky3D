@@ -209,18 +209,18 @@ bool IntersectSphere(float r, vec3 origin, vec3 dir, out float t, out vec3 nrm) 
 	float b = 2.0 * dot(origin, dir);
 	float c = dot(origin, origin) - r * r;
 	float d = b * b - 4.0 * a * c;
-	if(d < 0.0) return false;
+	if (d < 0.0) return false;
 
 	d = sqrt(d);
 	a *= 2.0;
 	float t1 = 0.5 * (-b + d);
 	float t2 = 0.5 * (-b - d);
 
-	if(t1<0.0) t1 = t2;
-	if(t2 < 0.0) t2 = t1;
+	if (t1 < 0.0) t1 = t2;
+	if (t2 < 0.0) t2 = t1;
 	t1 = min(t1, t2);
 
-	if(t1 < 0.0) return false;
+	if (t1 < 0.0) return false;
 	nrm = origin + t1 * dir;
 	t = t1;
 
@@ -234,7 +234,7 @@ float sphere_intersect(vec3 ray_dir, vec3 sphere_pos, float radius) {
     float b = dot(oc, ray_dir);
     float c = dot(oc, oc) - radius * radius;
     float h = b * b - c;
-    if(h < 0.0) return -1.0;
+    if (h < 0.0) return -1.0;
     h = sqrt(h);
     return -b - h;
 }
@@ -370,7 +370,7 @@ vec4 renderCloudsCumulus(vec3 ro, vec3 rd, float am, vec3 sunPosition, vec3 moon
 
 	// n and tt doesnt need to be initialized since it would be set by IntersectSphere
 	vec3 n; float tt;
-    if(IntersectSphere(500, ro, rd, tt, n)) {
+    if (IntersectSphere(500, ro, rd, tt, n)) {
 		float marchStep = float(kCUMULUS_CLOUDS_STEP) * cumulus_clouds_thickness;
 		vec3 dirStep = rd / rd.y * marchStep;
 		vec3 pos = n * cumulus_clouds_size;
@@ -583,10 +583,10 @@ void sky() {
 		vec3 polaris_dir = normalize(vec3(0.001, 0.0, 1.0)); // TODO Update with position of polaris
 		float sidereal_rate = -TAU / 24.0; // Sidereal rotation: ~15 degrees/hour (2π/24 radians/hour)
 		float rotation_angle = .05 * TIME * sidereal_rate; // TOOD update rotation w/ sky rotation
-		if(show_azimuthal_grid) {
+		if (show_azimuthal_grid) {
 			draw_grid(EYEDIR, zenith_dir, 0.0, azimuthal_grid_color, grid_spacing, grid_thickness, col);
 		}
-		if(show_equatorial_grid) {
+		if (show_equatorial_grid) {
 			draw_grid(EYEDIR, polaris_dir, rotation_angle, equatorial_grid_color, grid_spacing, grid_thickness, col);
 		}
 	}

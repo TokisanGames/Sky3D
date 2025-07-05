@@ -330,7 +330,7 @@ func update_sun_coords() -> void:
 	
 	fog_material.set_shader_parameter("sun_direction", sun_direction())
 	
-	if _sun_light_node != null:
+	if _sun_light_node:
 		_sun_light_node.transform = _sun_transform
 	
 	update_night_intensity()
@@ -418,7 +418,7 @@ func update_moon_coords() -> void:
 	sky_material.set_shader_parameter("moon_matrix", moon_basis)
 	fog_material.set_shader_parameter("moon_direction", moon_direction())
 	
-	if _moon_light_node != null:
+	if _moon_light_node:
 		_moon_light_node.transform = _moon_transform
 	
 	_moon_light_altitude_mult = TOD_Math.saturate(moon_direction().y)
@@ -970,7 +970,7 @@ func update_moon_texture() -> void:
 # Original sun light (0.984314, 0.843137, 0.788235)
 # Original sun horizon (1.0, 0.384314, 0.243137, 1.0)
 
-var _sun_light_node: DirectionalLight3D = null
+var _sun_light_node: DirectionalLight3D
 
 
 func set_sun_light_color(value: Color) -> void:
@@ -981,7 +981,7 @@ func set_sun_light_color(value: Color) -> void:
 	
 
 func update_sun_light_color() -> void:
-	if _sun_light_node == null:
+	if not _sun_light_node:
 		return
 	var sun_light_altitude_mult: float = TOD_Math.saturate(sun_direction().y * 2.0)
 	_sun_light_node.light_color = TOD_Math.plerp_color(sun_horizon_light_color, sun_light_color, sun_light_altitude_mult)
@@ -1002,7 +1002,7 @@ func set_sun_light_energy(value: float) -> void:
 	
 
 func update_sun_light_energy() -> void:
-	if _sun_light_node == null or not sun_light_enabled:
+	if not _sun_light_node or not sun_light_enabled:
 		return
 	
 	# Light energy should depend on how much of the sun disk is visible.
@@ -1023,10 +1023,8 @@ func set_sun_light_path(value: NodePath) -> void:
 
 	
 func update_sun_light_path() -> void:
-	if sun_light_path != null:
+	if sun_light_path:
 		_sun_light_node = get_node_or_null(sun_light_path) as DirectionalLight3D
-	else:
-		_sun_light_node = null
 
 
 #####################
@@ -1045,7 +1043,7 @@ func set_moon_light_color(value: Color) -> void:
 	
 
 func update_moon_light_color() -> void:
-	if _moon_light_node == null:
+	if not _moon_light_node:
 		return
 	_moon_light_node.light_color = moon_light_color
 		
@@ -1056,7 +1054,7 @@ func set_moon_light_energy(value: float) -> void:
 
 
 func update_moon_light_energy() -> void:
-	if _moon_light_node == null or not moon_light_enabled:
+	if not _moon_light_node or not moon_light_enabled:
 		return
 	
 	var l: float = TOD_Math.lerp_f(0.0, moon_light_energy, _moon_light_altitude_mult)
@@ -1078,10 +1076,8 @@ func set_moon_light_path(value: NodePath) -> void:
 
 
 func update_moon_light_path() -> void:
-	if moon_light_path != null:
+	if moon_light_path:
 		_moon_light_node = get_node_or_null(moon_light_path) as DirectionalLight3D
-	else:
-		_moon_light_node = null
 
 
 #####################
@@ -1587,12 +1583,12 @@ func update_clouds_cumulus_texture() -> void:
 #####################
 
 var _enable_environment: bool = false
-var environment: Environment = null: set = set_environment
+var environment: Environment: set = set_environment
 
 
 func set_environment(value: Environment) -> void:
 	environment = value
-	_enable_environment = true if environment != null else false
+	_enable_environment = true if environment else false
 	if _enable_environment:
 		_update_environment()
 

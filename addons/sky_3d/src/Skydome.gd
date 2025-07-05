@@ -310,7 +310,9 @@ func sun_direction() -> Vector3:
 func update_sun_coords() -> void:
 	if !is_scene_built:
 		return
-		
+	if _sun_light_node:
+		_sun_light_node.visible = true
+
 	var azimuth: float = sun_azimuth * TOD_Math.DEG_TO_RAD
 	var altitude: float = sun_altitude * TOD_Math.DEG_TO_RAD
 	
@@ -394,7 +396,9 @@ func moon_direction() -> Vector3:
 func update_moon_coords() -> void:
 	if !is_scene_built:
 		return
-		
+	if _moon_light_node:
+		_moon_light_node.visible = true
+
 	var azimuth: float = moon_azimuth * TOD_Math.DEG_TO_RAD
 	var altitude: float = moon_altitude * TOD_Math.DEG_TO_RAD
 	

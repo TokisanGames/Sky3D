@@ -178,19 +178,10 @@ vec3 get_moon_texture_equirectUV(vec3 dir) {
     dir = moon_matrix * dir * rotationMatrix(moon_texture_alignment);
 	dir.x = -dir.x;
 	dir.z = -dir.z;
-	float u = 0.0; // Longitude
-	float v = 0.0; // Latitude
-	if (moon_texture_flip_u) {
-    	u = 0.5 + atan(dir.z, dir.x) / (2.0 * 3.141592653589793);
-	} else {
-    	u = 0.5 - atan(dir.z, dir.x) / (2.0 * 3.141592653589793);
-	}
-
-	if (moon_texture_flip_v) {
-    	v = 0.5 + asin(dir.y) / 3.141592653589793;
-	} else {
-    	v = 0.5 - asin(dir.y) / 3.141592653589793;
-	}
+	float flipu = moon_texture_flip_u ? 1.0 : -1.0;
+	float flipv = moon_texture_flip_v ? 1.0 : -1.0;
+	float u = 0.5 + flipu * atan(dir.z, dir.x) / (2.0 * 3.141592653589793); // Longitude
+	float v = 0.5 + flipv * asin(dir.y) / 3.141592653589793; // Latitude
     return texture(moon_texture, vec2(u, v)).rgb;
 }
 
@@ -209,22 +200,16 @@ bool IntersectSphere(float r, vec3 origin, vec3 dir, out float t, out vec3 nrm) 
 	float b = 2.0 * dot(origin, dir);
 	float c = dot(origin, origin) - r * r;
 	float d = b * b - 4.0 * a * c;
-	if (d < 0.0) return false;
-
-	d = sqrt(d);
+	float valid = step(0.0, d); // 1.0 if d >= 0.0, else 0.0
+	d = sqrt(max(d, 0.0)); // Prevent sqrt of negative numbers
 	a *= 2.0;
 	float t1 = 0.5 * (-b + d);
 	float t2 = 0.5 * (-b - d);
-
-	if (t1 < 0.0) t1 = t2;
-	if (t2 < 0.0) t2 = t1;
-	t1 = min(t1, t2);
-
-	if (t1 < 0.0) return false;
-	nrm = origin + t1 * dir;
-	t = t1;
-
-	return true;
+	float t_min = min(t1, t2); // Select the smallest intersection
+	t = mix(t2, t1, step(t2, t1) * step(0.0, t1)); // Use t1 if t2 < t1 and t1 >= 0, else t2
+	t = mix(0.0, t, step(0.0, t) * valid); // Invalidate if t < 0 or d < 0
+	nrm = mix(vec3(0.0), origin + t * dir, step(0.0, t) * valid); // Set nrm only if valid
+	return bool(step(0.0, t) * valid);
 }
 
 // For rendering the moon. This function courtesy of Kelvin van Hoorn.
@@ -233,10 +218,10 @@ float sphere_intersect(vec3 ray_dir, vec3 sphere_pos, float radius) {
     vec3 oc = -sphere_pos;
     float b = dot(oc, ray_dir);
     float c = dot(oc, oc) - radius * radius;
-    float h = b * b - c;
-    if (h < 0.0) return -1.0;
-    h = sqrt(h);
-    return -b - h;
+	float h = b * b - c;
+	float valid = step(0.0, h); // 1.0 if h >= 0.0, else 0.0
+	h = sqrt(max(h, 0.0)); // Ensure sqrt is non-negative
+	return mix(-1.0, -b - h, valid);
 }
 
 // Atmosphere Inc
@@ -379,14 +364,13 @@ vec4 renderCloudsCumulus(vec3 ro, vec3 rd, float am, vec3 sunPosition, vec3 moon
 
 		vec2 mu = vec2(dot(sunPosition, rd), dot(moonPosition, rd));
 		vec3 mph = ((miePhase(mu.x, cumulus_clouds_partial_mie_phase) * atm_sun_mie_tint.rgb) +
-		miePhase(mu.y, cumulus_clouds_partial_mie_phase) * am);
+			miePhase(mu.y, cumulus_clouds_partial_mie_phase) * am);
 
 		vec4 t = vec4(1.0);
 		t.rgb += (mph.rgb * cumulus_clouds_mie_intensity);
 
 		for(int i = 0; i < kCUMULUS_CLOUDS_STEP; i++) {
 			float h = float(i) * 0.1; // / float(kCLOUDS_STEP);
-
 			float density = cloudsDensityCumulus(pos, wind, h);
 			float sh = saturate(exp(-cumulus_clouds_absorption * density * marchStep));
 			t *= sh;
@@ -515,15 +499,12 @@ vec3 align_and_rotate(vec3 dir, vec3 target, float rotation_angle) {
 	target = normalize(target);
 	vec3 axis = cross(z_axis, target);
 	float angle = acos(dot(z_axis, target));
-	if (length(axis) >= 0.0001) {
-		axis = normalize(axis);
-		vec4 align_quat = quaternion_from_axis_angle(axis, angle);
-		dir = rotate_vector(dir, align_quat);
-
-		// Rotate around the new Z-axis (which is now aligned with Polaris)
-		vec4 rot_quat = quaternion_from_axis_angle(vec3(0.0, 0.0, 1.0), rotation_angle);
-		dir = rotate_vector(dir, rot_quat);
-	}
+	float valid = step(0.0001, length(axis)); // 1.0 if length(axis) >= 0.0001
+	axis = normalize(axis);
+	vec4 align_quat = quaternion_from_axis_angle(axis, angle);
+	dir = mix(dir, rotate_vector(dir, align_quat), valid);
+	vec4 rot_quat = quaternion_from_axis_angle(vec3(0.0, 0.0, 1.0), rotation_angle);
+	dir = mix(dir, rotate_vector(dir, rot_quat), valid);
 	return dir;
 }
 

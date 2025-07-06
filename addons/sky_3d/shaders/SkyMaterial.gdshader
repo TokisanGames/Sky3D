@@ -143,46 +143,46 @@ vec3 tonemapPhoto(vec3 color, float exposure, float level) {
 
 // Provides a transformation matrix when passed a vec3.
 mat3 rotationMatrix(vec3 r) {
-    float c1 = cos(r.x), s1 = sin(r.x);
-    float c2 = cos(r.y), s2 = sin(r.y);
-    float c3 = cos(r.z), s3 = sin(r.z);
+	float c1 = cos(r.x), s1 = sin(r.x);
+	float c2 = cos(r.y), s2 = sin(r.y);
+	float c3 = cos(r.z), s3 = sin(r.z);
 
-    mat3 rotX = mat3(
-        vec3(1.0, 0.0, 0.0),
-        vec3(0.0, c1, -s1),
-        vec3(0.0, s1, c1)
-    );
+	mat3 rotX = mat3(
+		vec3(1.0, 0.0, 0.0),
+		vec3(0.0, c1, -s1),
+		vec3(0.0, s1, c1)
+	);
 
-    mat3 rotY = mat3(
-        vec3(c2, 0.0, s2),
-        vec3(0.0, 1.0, 0.0),
-        vec3(-s2, 0.0, c2)
-    );
+	mat3 rotY = mat3(
+		vec3(c2, 0.0, s2),
+		vec3(0.0, 1.0, 0.0),
+		vec3(-s2, 0.0, c2)
+	);
 
-    mat3 rotZ = mat3(
-        vec3(c3, -s3, 0.0),
-        vec3(s3, c3, 0.0),
-        vec3(0.0, 0.0, 1.0)
-    );
+	mat3 rotZ = mat3(
+		vec3(c3, -s3, 0.0),
+		vec3(s3, c3, 0.0),
+		vec3(0.0, 0.0, 1.0)
+	);
 
-    return rotZ * rotY * rotX; // Combine rotations in ZYX order
+	return rotZ * rotY * rotX; // Combine rotations in ZYX order
 }
 
 vec2 equirectUV(vec3 norm) {
 	float u = (atan(norm.y, norm.x) + PI) / TAU; // 0 to 1 horizontally
-    float v = acos(norm.z) / PI; // 0 (north pole) to 1 (south pole)
-    return vec2(u, v);
+	float v = acos(norm.z) / PI; // 0 (north pole) to 1 (south pole)
+	return vec2(u, v);
 }
 
 vec3 get_moon_texture_equirectUV(vec3 dir) {
-    dir = moon_matrix * dir * rotationMatrix(moon_texture_alignment);
+	dir = moon_matrix * dir * rotationMatrix(moon_texture_alignment);
 	dir.x = -dir.x;
 	dir.z = -dir.z;
 	float flipu = moon_texture_flip_u ? 1.0 : -1.0;
 	float flipv = moon_texture_flip_v ? 1.0 : -1.0;
 	float u = 0.5 + flipu * atan(dir.z, dir.x) / (2.0 * 3.141592653589793); // Longitude
 	float v = 0.5 + flipv * asin(dir.y) / 3.141592653589793; // Latitude
-    return texture(moon_texture, vec2(u, v)).rgb;
+	return texture(moon_texture, vec2(u, v)).rgb;
 }
 
 float disk(vec3 norm, vec3 coords, lowp float size) {
@@ -215,9 +215,9 @@ bool IntersectSphere(float r, vec3 origin, vec3 dir, out float t, out vec3 nrm) 
 // For rendering the moon. This function courtesy of Kelvin van Hoorn.
 // https://kelvinvanhoorn.com/2024/12/07/skybox-tutorial-godot/
 float sphere_intersect(vec3 ray_dir, vec3 sphere_pos, float radius) {
-    vec3 oc = -sphere_pos;
-    float b = dot(oc, ray_dir);
-    float c = dot(oc, oc) - radius * radius;
+	vec3 oc = -sphere_pos;
+	float b = dot(oc, ray_dir);
+	float c = dot(oc, oc) - radius * radius;
 	float h = b * b - c;
 	float valid = step(0.0, h); // 1.0 if h >= 0.0, else 0.0
 	h = sqrt(max(h, 0.0)); // Ensure sqrt is non-negative
@@ -357,7 +357,7 @@ vec4 renderCloudsCumulus(vec3 ro, vec3 rd, float am, vec3 sunPosition, vec3 moon
 
 	// n and tt doesnt need to be initialized since it would be set by IntersectSphere
 	vec3 n; float tt;
-    if (IntersectSphere(500, ro, rd, tt, n)) {
+	if (IntersectSphere(500, ro, rd, tt, n)) {
 		float marchStep = float(kCUMULUS_CLOUDS_STEP) * cumulus_clouds_thickness;
 		vec3 dirStep = rd / rd.y * marchStep;
 		vec3 pos = n * cumulus_clouds_size;
@@ -424,11 +424,11 @@ vec3 render_sky(vec3 worldPos, vec3 cloudsPos, vec3 sunPosition, vec3 moonPositi
 	// Tilt the sky along the X-axis.
 	mat3 tilt = rotationMatrix(vec3(sky_tilt, 0.0, 0.0));
 
-    // Rotation around Y-axis. For simulating Earth's rotation.
-    mat3 rotation = rotationMatrix(vec3(0.0, sky_rotation, 0.0));
+	// Rotation around Y-axis. For simulating Earth's rotation.
+	mat3 rotation = rotationMatrix(vec3(0.0, sky_rotation, 0.0));
 
-    // Initial XYZ rotation for alignment.
-    mat3 alignment_xyz = rotationMatrix(sky_alignment);
+	// Initial XYZ rotation for alignment.
+	mat3 alignment_xyz = rotationMatrix(sky_alignment);
 
 	// Combine everything together to get the desired alignment.
 	vec3 final_alignment = normalize(alignment_xyz * rotation * tilt * worldPos);

@@ -1,0 +1,24 @@
+[gd_resource type="ShaderMaterial" load_steps=4 format=3 uid="uid://cvhg5gv6gu1ln"]
+
+[ext_resource type="Shader" uid="uid://ce48pglr50d46" path="res://addons/sky_3d/shaders/perlin_fog.gdshader" id="1_qne0t"]
+
+[sub_resource type="Gradient" id="Gradient_k0tft"]
+offsets = PackedFloat32Array(0, 0.465116, 0.912791)
+colors = PackedColorArray(0.51, 0.185895, 0.0357, 0.470588, 0, 0, 0, 0, 0.106869, 0.0183216, 0.00177405, 0.470588)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_31c7m"]
+gradient = SubResource("Gradient_k0tft")
+use_hdr = true
+
+[resource]
+shader = ExtResource("1_qne0t")
+shader_parameter/noise_scale = 0.5
+shader_parameter/movement_dir = Vector3(7, 0, 7)
+shader_parameter/density_mult = 1.125
+shader_parameter/albedo_color = Color(0.93, 0.8, 0.76, 1)
+shader_parameter/emissionColor = Color(0.497474, 0.497474, 0.497474, 1)
+shader_parameter/gradient = SubResource("GradientTexture1D_31c7m")
+shader_parameter/fade_out_height = 2.0
+shader_parameter/fade_out_distance = 100.0
+shader_parameter/fade_out_horiz = 100.0
+shader_parameter/colorRand = 0.0

@@ -151,7 +151,8 @@ var debris_particle_amount: float = 10000
 
 
 func _ready():
-    call_deferred("_build_scene")#_build_scene()
+    if Engine.is_editor_hint():
+        call_deferred("_build_scene")
 
 
 func _setup_rain() -> Node3D:
@@ -169,6 +170,7 @@ func _setup_rain() -> Node3D:
     rain_particle.trail_enabled = true
     rain_particle.trail_lifetime = 0.1
     rain_particle.collision_base_size = 0.3
+    rain_particle.amount = 2000 # temp
     rain_particle.visibility_aabb = AABB(Vector3(-10, -10, -10), Vector3(20, 20, 20))
     
     # Rain Mesh
@@ -191,6 +193,7 @@ func _setup_rain() -> Node3D:
     rain_ripple.lifetime = 0.6
     rain_ripple.fixed_fps = 60.0
     rain_ripple.collision_base_size = 0.05
+    rain_ripple.amount = 2000 # temp
     rain_ripple.visibility_aabb = AABB(Vector3(-10, -10, -10), Vector3(20, 20, 20))
    
     
@@ -206,20 +209,111 @@ func _setup_rain() -> Node3D:
         
     rain_particle.sub_emitter = NodePath("../RippleParticles")
     
+    rain_ripple.emitting = false
+    rain_particle.emitting = false
+    
     return rain_node
     
 
-func _build_scene() -> void:  
+func _setup_snow() -> Node3D:
+    var snow_node: Node3D = Node3D.new()
+    snow_node.name = "Snow"
+    
+    var snow_material = load("res://addons/sky_3d/assets/resources/snow_material.tres")
+    var snow_ground_material = load("res://addons/sky_3d/assets/resources/snow_ripple_material.tres")
+    
+    var snow_process_material = load("res://addons/sky_3d/assets/resources/snow_process_material.tres")
+    var snow_ground_process_material = load("res://addons/sky_3d/assets/resources/snow_ground_process_material.tres")
+    
+    var snow_particle = GPUParticles3D.new()
+    snow_particle.name = "SnowParticles"
+    snow_particle.process_material = snow_process_material
+    snow_particle.lifetime = 5.0
+    snow_particle.fixed_fps = 60.0
+    snow_particle.collision_base_size = 0.1
+    snow_particle.amount = 8000 # temp
+    snow_particle.visibility_aabb = AABB(Vector3(-10, -10, -10), Vector3(20, 20, 20))
+    
+    var snow_ground = GPUParticles3D.new()
+    snow_ground.name = "SnowGround"
+    snow_ground.process_material = snow_ground_process_material
+    snow_ground.lifetime = 60.0
+    snow_ground.fixed_fps = 60.0
+    snow_ground.collision_base_size = 0.1
+    snow_ground.amount = 8000 # temp
+    snow_ground.visibility_aabb = AABB(Vector3(-10, -10, -10), Vector3(20, 20, 20))
+    
+    var quad_mesh_snow = QuadMesh.new()
+    quad_mesh_snow.size = Vector2(0.15, 0.15)
+    quad_mesh_snow.orientation = PlaneMesh.FACE_Z
+    snow_particle.draw_pass_1 = quad_mesh_snow
+    snow_particle.draw_pass_1.surface_set_material(0, snow_material)
+    
+    var quad_mesh_ground = QuadMesh.new()
+    quad_mesh_ground.size = Vector2(0.15, 0.15)
+    quad_mesh_ground.orientation = PlaneMesh.FACE_Y
+    snow_ground.draw_pass_1 = quad_mesh_ground
+    snow_ground.draw_pass_1.surface_set_material(0, snow_ground_material)
+    
+    snow_node.add_child(snow_particle)
+    snow_node.add_child(snow_ground)
+    
+    snow_particle.emitting = false
+    snow_ground.emitting = false
+    
+    snow_particle.sub_emitter = NodePath("../SnowGround")
+    
+    return snow_node
+    
+    
+func _setup_debris() -> Node3D:
+    var debris_node: Node3D = Node3D.new()
+    debris_node.name = "Debris"
+    var debris_material = load("res://addons/sky_3d/assets/resources/debris_material.tres")
+    var debris_process_material = load("res://addons/sky_3d/assets/resources/debris_process_material.tres")
+    
+    var debris_particle = GPUParticles3D.new()
+    debris_particle.name = "DebrisParticles"
+    debris_particle.process_material = debris_process_material
+    debris_particle.lifetime = 1.0
+    debris_particle.fixed_fps = 60.0
+    debris_particle.randomness = 0.3
+    debris_particle.amount = 6000 # temp
+    debris_particle.visibility_aabb = AABB(Vector3(-25, -25, -25), Vector3(50, 50, 50))
+    
+    var quad_mesh = QuadMesh.new()
+    quad_mesh.size = Vector2(0.1, 0.1)
+    quad_mesh.orientation = PlaneMesh.FACE_Z
+    debris_particle.draw_pass_1 = quad_mesh
+    debris_particle.draw_pass_1.surface_set_material(0, debris_material)
+    
+    debris_node.add_child(debris_particle)
+    
+    debris_particle.emitting = false
+    
+    return debris_node
+
+
+func _setup_sandstorm() -> Node3D:
     var sandstorm_node = Node3D.new()
     sandstorm_node.name = "Sandstorm"
-    var fog_volume = FogVolume.new()
-    fog_volume.size = Vector3(100.0, 100.0, 100.0)
-    fog_volume.name = "FogVolume"
-    fog_volume.material = ShaderMaterial.new()
-    fog_volume.material.shader = windy_shader
     
-    sandstorm_node.add_child(fog_volume)
-    print("Sandstorm adicionado. Filhos do ClimateSystem: ", get_children().size())
+    var sandstorm_material = load("res://addons/sky_3d/assets/resources/sandstorm_material.tres")
+    
+    var windy_volume = FogVolume.new()
+    windy_volume.size = Vector3(100.0, 100.0, 100.0)
+    windy_volume.name = "WindyVolume"
+    windy_volume.material = ShaderMaterial.new()
+    windy_volume.material.shader = sandstorm_material
+    windy_volume.transform.origin.y = 50
+    
+    sandstorm_node.add_child(windy_volume)
+    
+    return sandstorm_node
+
+
+func _build_scene() -> void:  
+    var sandstorm_node: Node3D = _setup_sandstorm()
     
     # Collision Height
     var collision_height: GPUParticlesCollisionHeightField3D = GPUParticlesCollisionHeightField3D.new()
@@ -228,28 +322,29 @@ func _build_scene() -> void:
     collision_height.transform.origin.y = 10
     
     # Rain
-    var rain_node = _setup_rain()
-    
-    # Debris
-    var debris_node: Node3D = Node3D.new()
-    debris_node.name = "Debris"
+    var rain_node: Node3D = _setup_rain()
     
     # Snow
-    var snow_node: Node3D = Node3D.new()
-    snow_node.name = "Snow"
+    var snow_node: Node3D = _setup_snow()
+    
+    # Debris
+    var debris_node: Node3D = _setup_debris()
     
     var sounds_node: Node3D = Node3D.new()
     sounds_node.name = "Sounds"
     
+    # a timeout to move the particles to the player
+    # instead of frame by frame
     var move_timer: Timer = Timer.new()
     move_timer.name = "MoveTimer"
     move_timer.wait_time = 2.0
     move_timer.autostart = true
     
-    var clouds_time: Timer = Timer.new()
-    clouds_time.name = "CloudsTimer"
-    clouds_time.wait_time = 600.0
-    clouds_time.autostart = true
+    ## TODO: change clouds randomly
+    var clouds_timer: Timer = Timer.new()
+    clouds_timer.name = "CloudsTimer"
+    clouds_timer.wait_time = 600.0
+    clouds_timer.autostart = true
     
     add_child(collision_height)
     add_child(sandstorm_node)
@@ -258,27 +353,31 @@ func _build_scene() -> void:
     add_child(snow_node)
     add_child(sounds_node)
     add_child(move_timer)
-    add_child(clouds_time)
-    
+    add_child(clouds_timer)
     
     var scene_root = get_tree().edited_scene_root
     if scene_root:
+        collision_height.owner = scene_root
         sandstorm_node.owner = scene_root
-        fog_volume.owner = scene_root
+        for child in sandstorm_node.get_children():
+            child.owner = scene_root
+            
         rain_node.owner = scene_root
         for child in rain_node.get_children():
             child.owner = scene_root
-        #rain_particle.owner = scene_root
-        #rain_ripple.owner = scene_root
+
         debris_node.owner = scene_root
+        for child in debris_node.get_children():
+            child.owner = scene_root
+            
         snow_node.owner = scene_root
-        #sounds_node.owner = scene_root
+        for child in snow_node.get_children():
+            child.owner = scene_root
+        sounds_node.owner = scene_root
         move_timer.owner = scene_root
-        #cloud_timer.owner = scene_root
-        collision_height.owner = scene_root
+        clouds_timer.owner = scene_root
         
-    print("Build_scene concluído. Total de filhos: ", get_children().size())
-    
+
 #
 #
 #func _kill_all_tweens() -> void:
@@ -331,22 +430,7 @@ func _build_scene() -> void:
     #windy_color = Color(0.93, 0.80, 0.76)
     #
 #
-#func _ready() -> void:
-    ##_build_scene()
-    #
-    #
-    #_default_effects_status()
-#
-    #if Engine.is_editor_hint():
-        #pass
-        ## Mock data
-        ##_setup_editor_mode()
-    #else:
-        #pass
-        ## UserData
-        ##_setup_game_mode()
-    #
-#
+
 #func _apply_editor_weather():
     #"""Future implementation"""
     #if not Engine.is_editor_hint():

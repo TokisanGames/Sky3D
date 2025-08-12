@@ -1,0 +1,21 @@
+[gd_resource type="ParticleProcessMaterial" load_steps=3 format=3 uid="uid://bmj3y72cwsk67"]
+
+[sub_resource type="Curve" id="Curve_dhxf3"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.494253, 0.696629), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_nhspu"]
+curve = SubResource("Curve_dhxf3")
+
+[resource]
+lifetime_randomness = 1.0
+emission_shape = 3
+emission_box_extents = Vector3(10, 10, 10)
+angle_min = 1.07288e-05
+angle_max = 360.0
+gravity = Vector3(1.51, -9.8, 3.88)
+scale_min = 0.1
+alpha_curve = SubResource("CurveTexture_nhspu")
+collision_mode = 2
+sub_emitter_mode = 3
+sub_emitter_amount_at_collision = 1

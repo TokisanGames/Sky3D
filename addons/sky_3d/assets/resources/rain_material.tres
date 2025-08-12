@@ -1,12 +1,12 @@
 [gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://c36gaemclxfut"]
 
-[ext_resource type="Texture2D" path="res://addons/sky_3d/assets/textures/paticles/rain_drop.png" id="1_62b6d"]
+[ext_resource type="Texture2D" uid="uid://dauhghy08v18x" path="res://addons/sky_3d/assets/textures/particles/rain_drop.png" id="1_jdtbe"]
 
 [resource]
 transparency = 1
 cull_mode = 2
 vertex_color_use_as_albedo = true
-albedo_texture = ExtResource("1_62b6d")
+albedo_texture = ExtResource("1_jdtbe")
 emission_enabled = true
 emission = Color(1, 1, 1, 1)
 emission_energy_multiplier = 0.2

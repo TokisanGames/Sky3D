@@ -1,6 +1,6 @@
 [gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://b2vymfydp2f0b"]
 
-[ext_resource type="Texture2D" uid="uid://dhh84vir0nid7" path="res://addons/sky_3d/assets/textures/paticles/debris.png" id="1_id0je"]
+[ext_resource type="Texture2D" uid="uid://bkbgok6f7d5qt" path="res://addons/sky_3d/assets/textures/particles/debris.png" id="1_id0je"]
 
 [resource]
 transparency = 1

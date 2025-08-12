@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dauhghy08v18x"
-path.s3tc="res://.godot/imported/rain_drop.png-7a30a323970d16703668fa0adf77708c.s3tc.ctex"
+uid="uid://erlkahi8nrsk"
+path.s3tc="res://.godot/imported/water_ripple.png-e956d8a4b8e357b6a733a108b5b1b846.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -11,8 +11,8 @@ metadata={
 
 [deps]
 
-source_file="res://addons/sky_3d/assets/textures/particles/rain_drop.png"
-dest_files=["res://.godot/imported/rain_drop.png-7a30a323970d16703668fa0adf77708c.s3tc.ctex"]
+source_file="res://textures/particles/water_ripple.png"
+dest_files=["res://.godot/imported/water_ripple.png-e956d8a4b8e357b6a733a108b5b1b846.s3tc.ctex"]
 
 [params]
 

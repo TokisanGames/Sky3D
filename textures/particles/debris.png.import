@@ -2,27 +2,26 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dauhghy08v18x"
-path.s3tc="res://.godot/imported/rain_drop.png-7a30a323970d16703668fa0adf77708c.s3tc.ctex"
+uid="uid://1vemgrxtcbp5"
+path="res://.godot/imported/debris.png-8952bf0914cda0d09a7d31bca711bf5c.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
-"vram_texture": true
+"vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/sky_3d/assets/textures/particles/rain_drop.png"
-dest_files=["res://.godot/imported/rain_drop.png-7a30a323970d16703668fa0adf77708c.s3tc.ctex"]
+source_file="res://textures/particles/debris.png"
+dest_files=["res://.godot/imported/debris.png-8952bf0914cda0d09a7d31bca711bf5c.ctex"]
 
 [params]
 
-compress/mode=2
+compress/mode=0
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
@@ -32,4 +31,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=0
+detect_3d/compress_to=1

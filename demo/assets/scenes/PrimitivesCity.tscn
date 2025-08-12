@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3 uid="uid://dipn6t27p0nap"]
+[gd_scene load_steps=23 format=3 uid="uid://dipn6t27p0nap"]
 
 [ext_resource type="PackedScene" uid="uid://bjmikbn4ac2lu" path="res://demo/assets/scenes/BuildingBlocks.tscn" id="1"]
 [ext_resource type="PackedScene" uid="uid://1ev4o7q8l4ey" path="res://demo/assets/meshes/Compass.tscn" id="2_gjkdl"]
@@ -12,6 +12,8 @@ albedo_texture = ExtResource("8")
 uv1_scale = Vector3(150, 150, 1)
 
 [sub_resource type="PlaneMesh" id="2"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_gjkdl"]
 
 [sub_resource type="StandardMaterial3D" id="3"]
 metallic = 0.75
@@ -91,6 +93,12 @@ transform = Transform3D(2000, 0, 0, 0, 1, 0, 0, 0, 2000, 0, 0, 0)
 layers = 4
 material_override = SubResource("1")
 mesh = SubResource("2")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D"]
+shape = SubResource("BoxShape3D_gjkdl")
+debug_color = Color(0.950642, 5.0056e-06, 0.567595, 0.42)
 
 [node name="Compass" parent="." instance=ExtResource("2_gjkdl")]
 

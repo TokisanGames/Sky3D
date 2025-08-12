@@ -171,7 +171,7 @@ func _setup_rain() -> Node3D:
     rain_particle.collision_base_size = 0.3
     rain_particle.visibility_aabb = AABB(Vector3(-10, -10, -10), Vector3(20, 20, 20))
     
-    # Mesh
+    # Rain Mesh
     var ribbon_mesh = RibbonTrailMesh.new()
     ribbon_mesh.shape = RibbonTrailMesh.SHAPE_CROSS
     ribbon_mesh.size = 0.05
@@ -181,12 +181,31 @@ func _setup_rain() -> Node3D:
     rain_particle.draw_pass_1 = ribbon_mesh
     rain_particle.draw_pass_1.surface_set_material(0, rain_material)
     
+    # Ripple
+    var ripple_material = load("res://addons/sky_3d/assets/resources/ripple_material.tres")
+    var ripple_process_material = load("res://addons/sky_3d/assets/resources/ripple_process_material.tres")
+    
     var rain_ripple = GPUParticles3D.new()
     rain_ripple.name = "RippleParticles"
+    rain_ripple.process_material = ripple_process_material
+    rain_ripple.lifetime = 0.6
+    rain_ripple.fixed_fps = 60.0
+    rain_ripple.collision_base_size = 0.05
+    rain_ripple.visibility_aabb = AABB(Vector3(-10, -10, -10), Vector3(20, 20, 20))
+   
+    
+    # Ripple Mesh
+    var quad_mesh = QuadMesh.new()
+    quad_mesh.size = Vector2(1.0, 1.0)
+    quad_mesh.orientation = PlaneMesh.FACE_Y
+    rain_ripple.draw_pass_1 = quad_mesh
+    rain_ripple.draw_pass_1.surface_set_material(0, ripple_material)
     
     rain_node.add_child(rain_particle)
     rain_node.add_child(rain_ripple)
         
+    rain_particle.sub_emitter = NodePath("../RippleParticles")
+    
     return rain_node
     
 
@@ -202,30 +221,37 @@ func _build_scene() -> void:
     sandstorm_node.add_child(fog_volume)
     print("Sandstorm adicionado. Filhos do ClimateSystem: ", get_children().size())
     
+    # Collision Height
+    var collision_height: GPUParticlesCollisionHeightField3D = GPUParticlesCollisionHeightField3D.new()
+    collision_height.name = "CollisionField"
+    collision_height.size = Vector3(20, 20, 20)
+    collision_height.transform.origin.y = 10
+    
     # Rain
     var rain_node = _setup_rain()
     
     # Debris
-    var debris_node = Node3D.new()
+    var debris_node: Node3D = Node3D.new()
     debris_node.name = "Debris"
     
     # Snow
-    var snow_node = Node3D.new()
+    var snow_node: Node3D = Node3D.new()
     snow_node.name = "Snow"
     
-    var sounds_node = Node3D.new()
+    var sounds_node: Node3D = Node3D.new()
     sounds_node.name = "Sounds"
     
-    var move_timer = Timer.new()
+    var move_timer: Timer = Timer.new()
     move_timer.name = "MoveTimer"
     move_timer.wait_time = 2.0
     move_timer.autostart = true
     
-    var clouds_time = Timer.new()
+    var clouds_time: Timer = Timer.new()
     clouds_time.name = "CloudsTimer"
     clouds_time.wait_time = 600.0
     clouds_time.autostart = true
     
+    add_child(collision_height)
     add_child(sandstorm_node)
     add_child(rain_node)
     add_child(debris_node)
@@ -233,6 +259,7 @@ func _build_scene() -> void:
     add_child(sounds_node)
     add_child(move_timer)
     add_child(clouds_time)
+    
     
     var scene_root = get_tree().edited_scene_root
     if scene_root:
@@ -248,6 +275,7 @@ func _build_scene() -> void:
         #sounds_node.owner = scene_root
         move_timer.owner = scene_root
         #cloud_timer.owner = scene_root
+        collision_height.owner = scene_root
         
     print("Build_scene concluído. Total de filhos: ", get_children().size())
     

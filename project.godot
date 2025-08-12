@@ -35,7 +35,9 @@ common/enable_pause_aware_picking=true
 [rendering]
 
 lights_and_shadows/directional_shadow/size=8192
-anti_aliasing/quality/msaa_3d=3
+anti_aliasing/quality/msaa_2d=1
+anti_aliasing/quality/msaa_3d=2
+anti_aliasing/quality/screen_space_aa=1
 quality/reflections/atlas_size=128
 quality/reflections/atlas_subdiv=1
 quality/filters/use_debanding=true

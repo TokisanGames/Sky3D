@@ -1,0 +1,21 @@
+[gd_resource type="ParticleProcessMaterial" load_steps=5 format=3 uid="uid://db2heyp020hec"]
+
+[sub_resource type="Curve" id="Curve_iyvk5"]
+_data = [Vector2(0.0114942, 0.011236), 0.0, 0.0, 0, 0, Vector2(0.494253, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="CurveTexture" id="CurveTexture_2vfwl"]
+curve = SubResource("Curve_iyvk5")
+
+[sub_resource type="Curve" id="Curve_gqw2g"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_og1km"]
+curve = SubResource("Curve_gqw2g")
+
+[resource]
+gravity = Vector3(0, 0, 0)
+scale_min = 0.1
+scale_curve = SubResource("CurveTexture_og1km")
+alpha_curve = SubResource("CurveTexture_2vfwl")

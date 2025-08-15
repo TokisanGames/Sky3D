@@ -5,7 +5,6 @@
 class_name Skydome
 extends Node
 
-signal sun_direction_changed(value)
 signal sun_transform_changed(value)
 signal moon_direction_changed(value)
 signal moon_transform_changed(value)
@@ -319,15 +318,13 @@ func update_sun_coords() -> void:
 	_sun_transform.origin = TOD_Math.to_orbit(altitude, azimuth)
 	_sun_transform = _sun_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
 	
-	_set_day_state(altitude)
-	emit_signal("sun_transform_changed", _sun_transform)
-	emit_signal("sun_transform_changed", sun_direction())
-	
 	fog_material.set_shader_parameter("sun_direction", sun_direction())
-	
 	if _sun_light_node:
 		_sun_light_node.transform = _sun_transform
+	emit_signal("sun_transform_changed", _sun_transform)
 	
+	_set_day_state(altitude)
+
 	update_night_intensity()
 	update_sun_light_color()
 	update_sun_light_energy()

@@ -352,7 +352,6 @@ func update_sun_coords() -> void:
 @export_range(-180.0, 180.0, 0.00001) var moon_azimuth: float = 5.0: set = set_moon_azimuth
 @export_range(-180.0, 180.0, 0.00001) var moon_altitude: float = -80.0: set = set_moon_altitude
 
-var _finish_set_moon_pos: bool = false
 var _moon_transform: Transform3D = Transform3D()
 var moon_light_enabled: bool = true: set = set_moon_light_enabled
 
@@ -397,14 +396,8 @@ func update_moon_coords() -> void:
 	var azimuth: float = moon_azimuth * TOD_Math.DEG_TO_RAD
 	var altitude: float = moon_altitude * TOD_Math.DEG_TO_RAD
 	
-	_finish_set_moon_pos = false
-	if not _finish_set_moon_pos:
-		_moon_transform.origin = TOD_Math.to_orbit(altitude, azimuth)
-		_finish_set_moon_pos = true
-	
-	if _finish_set_moon_pos:
-		_moon_transform = _moon_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
-		pass
+	_moon_transform.origin = TOD_Math.to_orbit(altitude, azimuth)
+	_moon_transform = _moon_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
 	
 	emit_signal("moon_transform_changed", _moon_transform)
 	emit_signal("moon_direction_changed", moon_direction())

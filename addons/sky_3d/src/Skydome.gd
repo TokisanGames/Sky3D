@@ -315,6 +315,7 @@ func update_sun_coords() -> void:
 	var azimuth: float = sun_azimuth * TOD_Math.DEG_TO_RAD
 	var altitude: float = sun_altitude * TOD_Math.DEG_TO_RAD
 	
+	# Position the sun on a unit sphere, orienting the light to the origin, mimicking a star orbiting a planet.
 	_sun_transform.origin = TOD_Math.to_orbit(altitude, azimuth)
 	_sun_transform = _sun_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
 	

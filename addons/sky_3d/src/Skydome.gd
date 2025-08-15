@@ -271,7 +271,6 @@ func set_equatorial_color(value: Color) -> void:
 @export_range(-180.0, 180.0, 0.00001) var sun_azimuth: float = 0.0: set = set_sun_azimuth
 @export_range(-180.0, 180.0, 0.00001) var sun_altitude: float = -27.387: set = set_sun_altitude
 
-var _finish_set_sun_pos: bool = false
 var _sun_transform := Transform3D()
 var sun_light_enabled: bool = true: set = set_sun_light_enabled
 
@@ -316,13 +315,8 @@ func update_sun_coords() -> void:
 	var azimuth: float = sun_azimuth * TOD_Math.DEG_TO_RAD
 	var altitude: float = sun_altitude * TOD_Math.DEG_TO_RAD
 	
-	_finish_set_sun_pos = false
-	if not _finish_set_sun_pos:
-		_sun_transform.origin = TOD_Math.to_orbit(altitude, azimuth)
-		_finish_set_sun_pos = true
-	
-	if _finish_set_sun_pos:
-		_sun_transform = _sun_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
+	_sun_transform.origin = TOD_Math.to_orbit(altitude, azimuth)
+	_sun_transform = _sun_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
 	
 	_set_day_state(altitude)
 	emit_signal("sun_transform_changed", _sun_transform)

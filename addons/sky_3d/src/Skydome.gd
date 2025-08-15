@@ -321,7 +321,7 @@ func update_sun_coords() -> void:
 	
 	_set_day_state(altitude)
 	emit_signal("sun_transform_changed", _sun_transform)
-	emit_signal("sun_transform_changed", sun_direction())
+	emit_signal("sun_direction_changed", sun_direction())
 	
 	fog_material.set_shader_parameter("sun_direction", sun_direction())
 	

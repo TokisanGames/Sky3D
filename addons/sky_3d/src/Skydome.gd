@@ -668,7 +668,7 @@ func set_atm_moon_mie_intensity(value: float) -> void:
 	if value == atm_moon_mie_intensity:
 		return
 	atm_moon_mie_intensity = value
-	update_atm_sun_mie_intensity()
+	update_atm_moon_mie_intensity()
 
 	
 func update_atm_moon_mie_intensity() -> void:

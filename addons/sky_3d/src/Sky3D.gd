@@ -273,24 +273,6 @@ func set_tonemap_exposure(value: float) -> void:
 		environment.tonemap_exposure = value
 
 
-## Light energy coming from the sky shader.
-@export_range(0, 16, 0.005) var skydome_energy: float = 1.0: set = set_skydome_energy
-
-func set_skydome_energy(value: float) -> void:
-	if sky:
-		skydome_energy = value
-		sky.exposure = value
-
-
-## Brightness of and light energy coming from the clouds.
-@export_range(0, 16, 0.005) var cloud_intensity: float = 0.6: set = set_cloud_intensity
-
-func set_cloud_intensity(value: float) -> void:
-	if sky:
-		cloud_intensity = value
-		sky.clouds_cumulus_intensity = value
-
-
 ## Maximum brightness of the Sun DirectionalLight, visible during the day.
 @export_range(0, 16, 0.005) var sun_energy: float = 1.0: set = set_sun_energy
 		
@@ -426,31 +408,6 @@ func set_night_ambient_min(value: float) -> void:
 func set_ambient_tween_time(value: float) -> void:
 	ambient_tween_time = value
 
-
-#####################
-## Overlays
-#####################
-
-@export_group("Overlays")
-
-
-## Overlays a zenith aligned spherical grid. Change color in Skydome.
-@export var show_azimuthal_grid: bool = false: set = set_azimuthal_grid
-
-func set_azimuthal_grid(value: bool) -> void:
-	if sky:
-		show_azimuthal_grid = value
-		sky.set_azimuthal_grid(value)
-
-
-## Overlays a zenith aligned with sky rotation. This is currently incorrect and should rotate around Polaris. Change color in Skydome.
-@export var show_equatorial_grid: bool = false: set = set_equatorial_grid
-
-func set_equatorial_grid(value: bool) -> void:
-	if sky:
-		show_equatorial_grid = value
-		sky.set_equatorial_grid(value)
-	
 
 #####################
 ## Setup

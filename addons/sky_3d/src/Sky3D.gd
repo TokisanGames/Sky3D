@@ -40,16 +40,15 @@ var sky: Skydome
 var sky_material: ShaderMaterial
 
 ## Enables all rendering and time tracking.
-@export var sky3d_enabled: bool = true : set = set_sky3d_enabled
-
-func set_sky3d_enabled(value: bool) -> void:
-	sky3d_enabled = value
-	if value:
-		show_sky()
-		resume()
-	else:
-		hide_sky()
-		pause()
+@export var sky3d_enabled: bool = true :
+	set(value):
+		sky3d_enabled = value
+		if value:
+			show_sky()
+			resume()
+		else:
+			hide_sky()
+			pause()
 
 
 #####################
@@ -60,46 +59,39 @@ func set_sky3d_enabled(value: bool) -> void:
 
 
 ## Enables the sky shader. Disable sky, lights, fog for a black sky or call hide_sky().
-@export var sky_enabled: bool = true : set = set_sky_enabled
-
-func set_sky_enabled(value: bool) -> void:
-	sky_enabled = value
-	if not sky or not sky_material:
-		return
-	sky_material.set_shader_parameter("sky_visible", value)
-	sky.clouds_cumulus_visible = clouds_enabled and value
-	sky.clouds_visible = clouds_enabled and value
+@export var sky_enabled: bool = true :
+	set(value):
+		sky_enabled = value
+		if sky and sky_material:
+			sky_material.set_shader_parameter("sky_visible", value)
+			sky.clouds_cumulus_visible = clouds_enabled and value
+			sky.clouds_visible = clouds_enabled and value
 
 
 ## Enables both 2D and cumulus cloud layers.
-@export var clouds_enabled: bool = true : set = set_clouds_enabled
-
-func set_clouds_enabled(value: bool) -> void:
-	clouds_enabled = value
-	if not sky:
-		return
-	sky.clouds_cumulus_visible = value
-	sky.clouds_visible = value
+@export var clouds_enabled: bool = true :
+	set(value):
+		clouds_enabled = value
+		if sky:
+			sky.clouds_cumulus_visible = value
+			sky.clouds_visible = value
 
 
 ## Enables the Sun and Moon DirectionalLights.
-@export var lights_enabled: bool = true : set = set_lights_enabled
-
-func set_lights_enabled(value: bool) -> void:
-	lights_enabled = value
-	if not sky:
-		return
-	sky.sun_light_enabled = value
-	sky.moon_light_enabled = value
+@export var lights_enabled: bool = true :
+	set(value):
+		lights_enabled = value
+		if sky:
+			sky.sun_light_enabled = value
+			sky.moon_light_enabled = value
 	
 
 ## Enables the screen space fog shader.
-@export var fog_enabled: bool = true : set = set_fog_enabled
-
-func set_fog_enabled(value: bool) -> void:
-	fog_enabled = value
-	if sky:
-		sky.fog_visible = value
+@export var fog_enabled: bool = true :
+	set(value):
+		fog_enabled = value
+		if sky:
+			sky.fog_visible = value
 
 
 ## Disables rendering of sky, fog, and lights
@@ -222,6 +214,8 @@ func _on_timeofday_updated(time: float) -> void:
 	update_day_night()
 
 
+var _contrib_tween: Tween
+
 ## Recalculates if it's currently day or night. Adjusts night ambient light if changing state or forced.
 func update_day_night(force: bool = false) -> void:
 	if not (sky and environment and is_inside_tree()):
@@ -230,17 +224,21 @@ func update_day_night(force: bool = false) -> void:
 	# If day transitioning to night
 	if abs(sky.sun_altitude) > 87 and (_is_day or force):
 		_is_day = false
-		var tween: Tween = get_tree().create_tween()
-		tween.set_parallel(true)
-		var contrib: float = minf(night_ambient_min, sky_contribution) if night_ambient else sky_contribution
-		tween.tween_property(environment, "ambient_light_sky_contribution", contrib, ambient_tween_time)
+		if _contrib_tween:
+			_contrib_tween.kill()
+		_contrib_tween = get_tree().create_tween()
+		_contrib_tween.set_parallel(true)
+		var night_contrib: float = minf(night_sky_contribution, sky_contribution) if night_ambient_boost else sky_contribution
+		_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", night_contrib, contribution_tween_time)
 
 	# Else if night transitioning to day
 	elif abs(sky.sun_altitude) <= 87 and (not _is_day or force):
 		_is_day = true
-		var tween: Tween = get_tree().create_tween()
-		tween.set_parallel(true)
-		tween.tween_property(environment, "ambient_light_sky_contribution", sky_contribution, ambient_tween_time)
+		if _contrib_tween:
+			_contrib_tween.kill()
+		_contrib_tween = get_tree().create_tween()
+		_contrib_tween.set_parallel(true)
+		_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", sky_contribution, contribution_tween_time)
 
 
 #####################
@@ -310,27 +308,69 @@ func update_day_night(force: bool = false) -> void:
 
 
 ## Ratio of ambient light to sky light. Works when there are no Reflection Probes or GI.
-## Sets the target for Environment.ambient_light_sky_contribution,
-## but applies it over ambient_tween_time, as it's optionally adjusted at night. See night_ambient.
-@export_range(0, 1, 0.005) var sky_contribution: float = 1.0: set = set_sky_contribution
-
-func set_sky_contribution(value: float) -> void:
-	if environment:
-		sky_contribution = value
-		environment.ambient_light_sky_contribution = value
-		update_day_night(true)
+## Sets the target for Environment.ambient_light_sky_contribution, which may change at night
+## depending on night_ambient_boost and night_sky_contribution.
+@export_range(0, 1, 0.005) var sky_contribution: float = 1.0 :
+	set(value):
+		if environment:
+			sky_contribution = value
+			environment.ambient_light_sky_contribution = value
+			update_day_night(true)
 
 
 ## Strength of ambient light. Works when there are no Reflection Probes or GI, and
-## sky_contribution < 1. Sets the target for Environment.ambient_light_energy. It's optionally
-## adjusted at night. See night_ambient.
-@export_range(0, 16, 0.005) var ambient_energy: float = 1.0: set = set_ambient_energy
-
-func set_ambient_energy(value: float) -> void:
-	if environment:
-		ambient_energy = value
+## sky_contribution < 1. Alias for Environment.ambient_light_energy.
+@export_range(0, 16, 0.005) var ambient_energy: float = 1.0 :
+	set(value):
 		environment.ambient_light_energy = value
 		update_day_night(true)
+	get:
+		return environment.ambient_light_energy if environment else ambient_energy
+
+
+@export_subgroup("Night")
+
+
+## Maximum strength of Moon DirectionalLight, visible at night. Alias for Skydome.moon_light_energy.
+@export_range(0, 16, 0.005) var moon_energy: float = 0.3 :
+	set(value):
+		if sky:
+			sky.moon_light_energy = value
+	get:
+		return sky.moon_light_energy if sky else moon_energy
+
+
+## Opacity of Moon DirectionalLight shadow. Alias for MoonLight.shadow_opacity.
+@export_range(0, 1, 0.005) var moon_shadow_opacity: float = 1.0 :
+	set(value):
+		if moon:
+			moon.shadow_opacity = value
+	get:
+		return moon.shadow_opacity if moon else moon_shadow_opacity
+
+
+## Enables a lower sky_contribution at night, which allows more ambient energy to show.
+## To use, ensure there are no ReflectionProbes or GI. Set ambient_energy > 0.
+## Set night_sky_contribution < sky_contribution.
+## Then at night, Environment.ambient_light_sky_contribution will be set lower, which
+## will show more ambient_energy.
+@export var night_ambient_boost: bool = true :
+	set(value):
+		night_ambient_boost = value
+		update_day_night(true)
+
+
+## Sets Environment.ambient_light_sky_contribution at night if night_ambient_boost is enabled.
+## See night_ambient_boost and sky_contribution.
+@export_range(0, 1, 0.005) var night_sky_contribution: float = 0.7 :
+	set(value):
+		night_sky_contribution = value
+		if night_ambient_boost:
+			update_day_night(true)
+
+
+## Transition time for changing sky contribution when shifting between day and night.
+@export_range(0, 30, 0.05) var contribution_tween_time: float = 3.0
 
 
 @export_subgroup("Auto Exposure")
@@ -383,51 +423,6 @@ func set_ambient_energy(value: float) -> void:
 			camera_attributes.auto_exposure_speed = value
 	get:
 		return camera_attributes.auto_exposure_speed if camera_attributes else auto_exposure_speed
-
-
-@export_subgroup("Night")
-
-
-## Maximum strength of Moon DirectionalLight, visible at night. Alias for Skydome.moon_light_energy.
-@export_range(0, 16, 0.005) var moon_energy: float = 0.3 :
-	set(value):
-		if sky:
-			sky.moon_light_energy = value
-	get:
-		return sky.moon_light_energy if sky else moon_energy
-
-
-## Opacity of Moon DirectionalLight shadow. Alias for MoonLight.shadow_opacity.
-@export_range(0, 1, 0.005) var moon_shadow_opacity: float = 1.0 :
-	set(value):
-		if moon:
-			moon.shadow_opacity = value
-	get:
-		return moon.shadow_opacity if moon else moon_shadow_opacity
-
-
-## Enables a different ambient light setting at night.
-@export var night_ambient: bool = true: set = set_night_ambient
-
-func set_night_ambient(value: bool) -> void:
-	night_ambient = value
-	update_day_night(true)
-
-
-## Strength of ambient light at night. Sky_contribution must be < 1. See Environment.ambient_light_energy.
-@export_range(0, 1, 0.005) var night_ambient_min: float = 0.7 : set = set_night_ambient_min
-
-func set_night_ambient_min(value: float) -> void:
-	night_ambient_min = value
-	if night_ambient:
-		update_day_night(true)
-
-
-## Transition time for changing ambient light, typically when shifting between day and night.
-@export_range(0, 30, 0.05) var ambient_tween_time: float = 3.0 : set = set_ambient_tween_time
-
-func set_ambient_tween_time(value: float) -> void:
-	ambient_tween_time = value
 
 
 #####################

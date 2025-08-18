@@ -1357,7 +1357,7 @@ func update_clouds_texture() -> void:
 @export_range(0.0, 1.0, 0.001) var clouds_cumulus_coverage: float = 0.55: set = set_clouds_cumulus_coverage
 @export var clouds_cumulus_absorption: float = 2.0: set = set_clouds_cumulus_absorption
 @export_range(0.0, 3.0, 0.001) var clouds_cumulus_noise_freq: float = 2.7: set = set_clouds_cumulus_noise_freq
-@export var clouds_cumulus_intensity: float = 0.6: set = set_clouds_cumulus_intensity
+@export_range(0, 16, 0.005) var clouds_cumulus_intensity: float = 0.6: set = set_clouds_cumulus_intensity
 @export var clouds_cumulus_mie_intensity: float = 1.0: set = set_clouds_cumulus_mie_intensity
 @export_range(0.0, 0.9999999, 0.0000001) var clouds_cumulus_mie_anisotropy: float = 0.206: set = set_clouds_cumulus_mie_anisotropy
 @export var clouds_cumulus_size: float = 0.5: set = set_clouds_cumulus_size

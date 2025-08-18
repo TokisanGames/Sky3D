@@ -10,6 +10,7 @@
 albedo_color = Color(0.396078, 0.396078, 0.396078, 1)
 albedo_texture = ExtResource("8")
 uv1_scale = Vector3(150, 150, 1)
+texture_filter = 5
 
 [sub_resource type="PlaneMesh" id="2"]
 

@@ -28,6 +28,10 @@ enabled=PackedStringArray("res://addons/sky_3d/plugin.cfg")
 
 import/blender/enabled=false
 
+[layer_names]
+
+3d_render/layer_10="wet_surfaces"
+
 [physics]
 
 common/enable_pause_aware_picking=true

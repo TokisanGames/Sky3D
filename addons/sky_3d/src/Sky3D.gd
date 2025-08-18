@@ -39,7 +39,7 @@ var sky: Skydome
 ## The Sky shader.
 var sky_material: ShaderMaterial
 # The climate system
-var climate: ClimateSystem
+var climate: Weather
 
 ## Enables all rendering and time tracking.
 @export var sky3d_enabled: bool = true : set = set_sky3d_enabled
@@ -537,7 +537,7 @@ func _initialize() -> void:
     if has_node("ClimateSystem"):
         climate = $ClimateSystem
     elif is_inside_tree():
-        climate = ClimateSystem.new()
+        climate = Weather.new()
         climate.name = "ClimateSystem"
         add_child(climate, true)
         climate.owner = get_tree().edited_scene_root

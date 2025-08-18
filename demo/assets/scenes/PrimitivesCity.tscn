@@ -88,7 +88,7 @@ emission_energy_multiplier = 5.0
 
 [node name="PrimitivesCity" type="Node3D"]
 
-[node name="Floor" type="MeshInstance3D" parent="."]
+[node name="Floor" type="MeshInstance3D" parent="." groups=["wet_surfaces"]]
 transform = Transform3D(2000, 0, 0, 0, 1, 0, 0, 0, 2000, 0, 0, 0)
 layers = 4
 material_override = SubResource("1")

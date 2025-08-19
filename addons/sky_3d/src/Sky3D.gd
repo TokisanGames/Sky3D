@@ -125,6 +125,24 @@ func show_sky() -> void:
 @export_group("Time")
 
 
+## Allows time to progress in the editor. Alias for TimeOfDay.update_in_editor.
+@export var editor_time_enabled: bool = true :
+	set(value):
+		if tod:
+			tod.update_in_editor = value
+	get:
+		return tod.update_in_editor if tod else editor_time_enabled
+
+
+## Allows time to progress in game. Alias for TimeOfDay.update_in_game.
+@export var game_time_enabled: bool = true :
+	set(value):
+		if tod:
+			tod.update_in_game = value
+	get:
+		return tod.update_in_game if tod else game_time_enabled
+
+
 ## Readable game date string, eg. '2025-01-01'. Alias for TimeOfDay.game_date.
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var game_date: String = "" :
@@ -137,24 +155,6 @@ var game_date: String = "" :
 var game_time: String = "" :
 	get:
 		return tod.game_time if tod else game_time
-
-
-## Allows time to progress in the editor. Alias for TimeOfDay.update_in_editor.
-@export var enable_editor_time: bool = true :
-	set(value):
-		if tod:
-			tod.update_in_editor = value
-	get:
-		return tod.update_in_editor if tod else enable_editor_time
-
-
-## Allows time to progress in game. Alias for TimeOfDay.update_in_game.
-@export var enable_game_time: bool = true :
-	set(value):
-		if tod:
-			tod.update_in_game = value
-	get:
-		return tod.update_in_game if tod else enable_game_time
 
 
 ## The current in-game time in hours from 0.0 to 23.99. Smaller or larger values than the range will wrap.

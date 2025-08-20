@@ -80,8 +80,8 @@ uniform float cirrus_sky_tint_fade = 0.5;
 uniform float cirrus_intensity = 10.0;
 uniform float cirrus_size = 2.0;
 uniform vec2 cirrus_uv = vec2(0.16, 0.11);
-uniform float cirrus_speed = 0.07;
-uniform vec2 cirrus_direction = vec2(0.25);
+uniform vec2 cirrus_position1 = vec2(0.0);
+uniform vec2 cirrus_position2 = vec2(0.0);
 uniform vec4 cirrus_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
 uniform vec4 cirrus_horizon_light_color: source_color = vec4(0.98, 0.43, 0.15, 1.0);
 uniform vec4 cirrus_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
@@ -96,8 +96,7 @@ uniform float cumulus_noise_freq = 2.7;
 uniform float cumulus_sky_tint_fade = 0.0;
 uniform float cumulus_intensity = 1.0;
 uniform float cumulus_size = 0.5;
-uniform float cumulus_speed = 0.05;
-uniform vec3 cumulus_direction = vec3(0.25, 0.1, 0.25);
+uniform vec2 cumulus_position = vec2(0.0);
 uniform sampler2D cumulus_texture;
 uniform vec4 cumulus_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
 uniform vec4 cumulus_horizon_light_color: source_color = vec4(0.98, 0.443, 0.15, 1.0);
@@ -236,12 +235,9 @@ vec3 calc_atmospheric_scatter(float sr, float sm, vec2 mu, vec3 mult) {
 //------------------------------------------------------------------------------
 const int CUMULUS_STEP = 10;
 
-float sample_cirrus_noise(vec2 coords, vec2 offset, float p_time) {
-	float speed = p_time * cirrus_speed * .5; // .5 matches cumulus clouds
-	vec2 wind = offset * speed;
-	vec2 wind2 = (offset + offset) * speed;
-	float a = textureLod(cirrus_texture, coords.xy * cirrus_uv - wind, 0.0).r;
-	float b = textureLod(cirrus_texture, coords.xy * cirrus_uv - wind2, 0.0).r;
+float sample_cirrus_noise(vec2 coords) {
+	float a = textureLod(cirrus_texture, coords.xy * cirrus_uv + cirrus_position1, 0.0).r;
+	float b = textureLod(cirrus_texture, coords.xy * cirrus_uv + cirrus_position2, 0.0).r;
 	return ((a + b) * 0.5);
 }
 
@@ -269,11 +265,10 @@ float calc_cumulus_fbm(vec3 p, float l) {
 	return ret;
 }
 
-float calc_cirrus_density(vec2 p, vec2 offset, float p_time) {
-	float d = sample_cirrus_noise(p, offset, p_time);
+float calc_cirrus_density(vec2 p) {
+	float d = sample_cirrus_noise(p);
 	float c = 1.0 - cirrus_coverage;
 	d = d - c;
-	//d += d;
 	return clamp_to_unit(d);
 }
 
@@ -290,10 +285,10 @@ float calc_cumulus_density(vec3 p, vec3 offset, float t) {
 	return clamp_to_unit(dens);
 }
 
-vec4 render_cirrus_clouds(vec3 pos, float p_time) {
+vec4 render_cirrus_clouds(vec3 pos) {
 	pos.xy = pos.xz / pos.y;
 	pos *= cirrus_size;
-	float density = calc_cirrus_density(pos.xy, cirrus_direction, p_time);
+	float density = calc_cirrus_density(pos.xy);
 	float sh = clamp_to_unit(exp(-cirrus_absorption * density));
 	float a = clamp_to_unit(density * cirrus_thickness);
 	return vec4(vec3(density*sh) * cirrus_intensity, a);
@@ -301,7 +296,7 @@ vec4 render_cirrus_clouds(vec3 pos, float p_time) {
 
 vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_pos, float p_time) {
 	vec4 ret = vec4(0.);
-	vec3 wind = cumulus_direction * (p_time * cumulus_speed);
+	vec3 wind = -vec3(cumulus_position.x, 0.0, cumulus_position.y);
 	float a = 0.0;
 
 	// n and tt doesnt need to be initialized since it would be set by ray_sphere_intersect
@@ -371,7 +366,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, ve
 	float moonMask = (1.0 - moon_mask);
 
 	// Deep space
-	
+
 	// Tilt the sky along the X-axis.
 	mat3 tilt = create_rotation_matrix(vec3(star_tilt, 0.0, 0.0));
 
@@ -407,7 +402,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, ve
 
 	// Clouds
 	if (cirrus_visible) {
-		vec4 cirrus_clouds = render_cirrus_clouds(clouds_pos, p_time);
+		vec4 cirrus_clouds = render_cirrus_clouds(clouds_pos);
 		cirrus_clouds.a = clamp_to_unit(cirrus_clouds.a);
 		cirrus_clouds.rgb *= mix(mix(cirrus_day_color.rgb, cirrus_horizon_light_color.rgb, angle_mult.x), cirrus_night_color.rgb, angle_mult.w);
 

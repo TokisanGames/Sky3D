@@ -28,10 +28,33 @@ var cumulus_material: Material
 var fog_material: Material
 
 
+#####################
+## Setup 
+#####################
+
+
+var environment: Environment:
+	set(value):
+		environment = value
+		_update_ambient_color()
+
+		
+func _update_ambient_color() -> void:
+	if not environment or not _sun_light_node:
+		return
+	var factor: float = clampf(-sun_direction().y + 0.60, 0., 1.)
+	var col: Color = _sun_light_node.light_color.lerp(atm_night_tint * atm_night_intensity(), factor)
+	col.a = 1.
+	col.v = clamp(col.v, .35, 1.)
+	environment.ambient_light_color = col
+
+
 func _ready() -> void:
+	set_process(false)
+	set_physics_process(false)
+	
 	build_scene()
 
-	# Update properties
 	# General
 	update_color_correction()
 	update_ground_color()
@@ -89,8 +112,6 @@ func _ready() -> void:
 	update_cirrus_intensity()
 	update_cirrus_size()
 	update_cirrus_uv()
-	update_cirrus_direction()
-	update_cirrus_speed()
 	update_cirrus_texture()
 	
 	# Cumulus Clouds
@@ -105,8 +126,6 @@ func _ready() -> void:
 	update_cumulus_mie_intensity()
 	update_cumulus_mie_anisotropy()
 	update_cumulus_size()
-	update_cumulus_direction()
-	update_cumulus_speed()
 	update_cumulus_texture()
 	
 	# Stars
@@ -118,21 +137,7 @@ func _ready() -> void:
 	update_star_scintillation()
 	update_star_scintillation_speed()
 	
-
-var environment: Environment:
-	set(value):
-		environment = value
-		_update_ambient_color()
-
-		
-func _update_ambient_color() -> void:
-	if not environment or not _sun_light_node:
-		return
-	var factor: float = clampf(-sun_direction().y + 0.60, 0., 1.)
-	var col: Color = _sun_light_node.light_color.lerp(atm_night_tint * atm_night_intensity(), factor)
-	col.a = 1.
-	col.v = clamp(col.v, .35, 1.)
-	environment.ambient_light_color = col
+	_check_cloud_processing()
 
 
 func build_scene() -> void:
@@ -173,10 +178,40 @@ func _setup_mesh_instance(target: MeshInstance3D, origin: Vector3) -> void:
 	
 
 #####################
-## Global 
+## Processing 
 #####################
 
-@export_group("Global")
+
+func _physics_process(delta: float) -> void:
+	process_tick(delta)
+
+
+func _process(delta: float) -> void:
+	process_tick(delta)
+
+
+## If [method process_method] is set to manual, this function can be called with the number of 
+## seconds passed to update the position of the clouds.
+func process_tick(delta: float) -> void:
+	if not (cirrus_visible or cumulus_visible):
+		return
+	var position_delta: Vector2 = _cloud_velocity * delta
+	if cumulus_visible:
+		_cumulus_position += position_delta
+		sky_material.set_shader_parameter("cumulus_position", _cumulus_position)
+	if cirrus_visible:
+		position_delta *= cirrus_speed_reduction
+		_cirrus_position1 = (_cirrus_position1 + position_delta).posmod(1.0)
+		_cirrus_position2 = (_cirrus_position2 + position_delta).posmod(1.0)
+		sky_material.set_shader_parameter("cirrus_position1", _cirrus_position1)
+		sky_material.set_shader_parameter("cirrus_position2", _cirrus_position2)
+
+
+#####################
+## General 
+#####################
+
+@export_group("Sky")
 @export_range(0.0, 1.0, 0.001) var tonemap_level: float = 0.0: set = set_tonemap_level
 @export var exposure: float = 1.0: set = set_exposure
 @export var ground_color: Color = Color(0.3, 0.3, 0.3, 1.0): set = set_ground_color
@@ -1032,10 +1067,98 @@ func update_fog_render_priority() -> void:
 
 
 #####################
-## Cirrus Clouds
+## Clouds
 #####################
 
 @export_group("Clouds")
+
+#####################
+## Wind
+#####################
+@export_subgroup("Wind")
+
+var _cloud_speed: float = 0.07
+var _cloud_direction := Vector2(0.25, 0.25)
+var _cloud_velocity := Vector2.ZERO
+var _cirrus_position1 := Vector2.ZERO
+var _cirrus_position2 := Vector2.ZERO
+var _cumulus_position := Vector2.ZERO
+
+@export_subgroup("Wind")
+
+# Converts the wind speed from m/s to "shader units" to get clouds moving at a "realistic" speed.
+# Note that "realistic" is an estimate as there is no such thing as an altitude for these clouds.
+const WIND_SPEED_FACTOR: float = 0.01
+## Sets the wind speed.
+@export_custom(PROPERTY_HINT_RANGE, "0,120,0.1,or_greater,or_less,suffix:m/s") var wind_speed: float = 1.0:
+	set(value):
+		_cloud_speed = value * WIND_SPEED_FACTOR
+		_check_cloud_processing()
+	get:
+		return _cloud_speed / WIND_SPEED_FACTOR
+
+# Zero degrees means the wind is coming from the north, but the shader uses the +X axis as zero, so
+# we need to convert between the two with this offset.
+const WIND_DIRECTION_OFFSET: float = deg_to_rad(-90)
+## Sets the wind direction. Zero means the wind is coming from the north, 90 from the east,
+## 180 from the south and 270 (or -90) from the west.
+@export_custom(PROPERTY_HINT_RANGE, "-180,180,0.1,radians_as_degrees") var wind_direction: float = 0.0:
+	set(value):
+		wind_direction = value
+		_cloud_direction = Vector2.from_angle(value + WIND_DIRECTION_OFFSET)
+		# We set this value here explicitly to prevent it from "wrapping around" at the edges.
+		# That would otherwise happen with a non-zero WIND_DIRECTION_OFFSET on either end of the
+		# slider (depending on the sign of that offset). We hold on to it here make sure the
+		# slider stays at the same edge. See also the 'get' function below.
+		_check_cloud_processing()
+	get:
+		# We fetch the real wind direction by taking the angle from the clouds direction
+		# vector and correcting it for the offset again.
+		var real_wind_direction = _cloud_direction.angle() - WIND_DIRECTION_OFFSET
+		# What we do here is see if the wind direction we've stored in the property, as
+		# explained in 'set' above, is approximately equal to the direction we've just
+		# retrieved from the sky dome. This will be the case if we were the last to set it
+		# but it won't be if someone else directly changed it in the sky dome, so only
+		# use the value from the sky dome if it's different.
+		return wind_direction if is_zero_approx(wrapf(wind_direction - real_wind_direction, 0, TAU)) else real_wind_direction
+
+
+## * Set [0, <1] to make the cirrus clouds appear higher than the cummulus clouds via a parallax effect.[br]
+## * Set >= 1 to make them appear at the same level or lower.[br]
+## * Set negative to make the cirrus clouds move backwards, which is a real phenomenon called wind shear.[br]
+## Finally, you can adjust [member cirrus_size] and [member cumulus_size] to adjust the scale of the 
+## cloud noise map UVs, which has the effect of changing apparent height and speed. 
+@export_range(0.,1.,.01, "or_greater","or_less") var cirrus_speed_reduction: float = 0.2
+
+enum { PHYSICS_PROCESS, PROCESS, MANUAL }
+## Sky3D is updated in two parts. The sky, sun, moon, and stars are updated by the
+## [member TimeOfDay.update_interval] timer. Cloud movement is updated by this method: your choice of
+## _physics_process(), _process(), or by manually calling [method process_tick].
+@export_enum("Physics Process", "Process", "Manual") var process_method: int = PHYSICS_PROCESS:
+	set(value):
+		process_method = value
+		_check_cloud_processing()
+
+
+func _check_cloud_processing() -> void:
+	var enable: bool = (cirrus_visible or cumulus_visible) and wind_speed != 0.0
+	_cloud_velocity = _cloud_direction * _cloud_speed
+	match process_method:
+		PHYSICS_PROCESS:
+			set_physics_process(enable)
+			set_process(!enable)
+		PROCESS:
+			set_physics_process(!enable)
+			set_process(enable)
+		MANUAL, _:
+			set_physics_process(false)
+			set_process(false)
+
+
+#####################
+## Cirrus Clouds
+#####################
+
 @export_subgroup("Cirrus")
 @export var cirrus_visible: bool = true: set = set_cirrus_visible
 @export var cirrus_thickness: float = 1.7: set = set_cirrus_thickness
@@ -1043,11 +1166,11 @@ func update_fog_render_priority() -> void:
 @export var cirrus_absorption: float = 2.0: set = set_cirrus_absorption
 @export_range(0.0, 1.0, 0.001) var cirrus_sky_tint_fade: float = 0.5: set = set_cirrus_sky_tint_fade
 @export var cirrus_intensity: float = 10.0: set = set_cirrus_intensity
-@export var cirrus_size: float = 2.0: set = set_cirrus_size
-@export var cirrus_uv: Vector2 = Vector2(0.16, 0.11): set = set_cirrus_uv
-@export var cirrus_direction: Vector2 = Vector2(0.25, 0.25): set = set_cirrus_direction
-@export var cirrus_speed: float = 0.07: set = set_cirrus_speed
 @export var cirrus_texture: Texture2D = CIRRUS_TEXTURE: set = _set_cirrus_texture
+@export var cirrus_uv: Vector2 = Vector2(0.16, 0.11): set = set_cirrus_uv
+## This parameter adjusts the scale of the noise texture, which indirectly affects the apparent height and 
+## speed of the clouds. Use it with [member cirrus_speed_reduction] to refine cirrus speed and height.
+@export var cirrus_size: float = 1.0: set = set_cirrus_size
 
 
 func set_cirrus_visible(value: bool) -> void:
@@ -1055,6 +1178,7 @@ func set_cirrus_visible(value: bool) -> void:
 		return
 	cirrus_visible = value
 	sky_material.set_shader_parameter("cirrus_visible", value)
+	_check_cloud_processing()
 
 
 func set_cirrus_thickness(value: float) -> void:
@@ -1122,17 +1246,17 @@ func update_cirrus_intensity() -> void:
 	sky_material.set_shader_parameter("cirrus_intensity", cirrus_intensity)
 
 
-func set_cirrus_size(value: float) -> void:
-	if value == cirrus_size:
+func _set_cirrus_texture(value: Texture2D) -> void:
+	if value == cirrus_texture:
 		return
-	cirrus_size = value
-	update_cirrus_size()
-	
+	cirrus_texture = value
+	update_cirrus_texture()
 
-func update_cirrus_size() -> void:
+
+func update_cirrus_texture() -> void:
 	if !is_scene_built:
 		return
-	sky_material.set_shader_parameter("cirrus_size", cirrus_size)
+	sky_material.set_shader_parameter("cirrus_texture", cirrus_texture)
 
 
 func set_cirrus_uv(value: Vector2) -> void:
@@ -1148,43 +1272,17 @@ func update_cirrus_uv() -> void:
 	sky_material.set_shader_parameter("cirrus_uv", cirrus_uv)
 
 
-func set_cirrus_direction(value: Vector2) -> void:
-	if value == cirrus_direction:
+func set_cirrus_size(value: float) -> void:
+	if value == cirrus_size:
 		return
-	cirrus_direction = value
-	update_cirrus_direction()
-	
+	cirrus_size = value
+	update_cirrus_size()
 
-func update_cirrus_direction() -> void:
+
+func update_cirrus_size() -> void:
 	if !is_scene_built:
 		return
-	sky_material.set_shader_parameter("cirrus_direction", cirrus_direction)
-
-
-func set_cirrus_speed(value: float) -> void:
-	if value == cirrus_speed:
-		return
-	cirrus_speed = value
-	update_cirrus_speed()
-	
-
-func update_cirrus_speed() -> void:
-	if !is_scene_built:
-		return
-	sky_material.set_shader_parameter("cirrus_speed", cirrus_speed)
-
-
-func _set_cirrus_texture(value: Texture2D) -> void:
-	if value == cirrus_texture:
-		return
-	cirrus_texture = value
-	update_cirrus_texture()
-
-
-func update_cirrus_texture() -> void:
-	if !is_scene_built:
-		return
-	sky_material.set_shader_parameter("cirrus_texture", cirrus_texture)
+	sky_material.set_shader_parameter("cirrus_size", cirrus_size)
 
 
 #####################
@@ -1203,10 +1301,8 @@ func update_cirrus_texture() -> void:
 @export_range(0, 16, 0.005) var cumulus_intensity: float = 0.6: set = set_cumulus_intensity
 @export var cumulus_mie_intensity: float = 1.0: set = set_cumulus_mie_intensity
 @export_range(0.0, 0.9999999, 0.0000001) var cumulus_mie_anisotropy: float = 0.206: set = set_cumulus_mie_anisotropy
-@export var cumulus_size: float = 0.5: set = set_cumulus_size
-@export var cumulus_direction: Vector3 = Vector3(0.25, 0.1, 0.25): set = set_cumulus_direction
-@export var cumulus_speed: float = 0.05: set = set_cumulus_speed
 @export var cumulus_texture: Texture2D = CUMULUS_TEXTURE: set = _set_cumulus_texture
+@export var cumulus_size: float = 0.5: set = set_cumulus_size
 
 
 func set_cumulus_visible(value: bool) -> void:
@@ -1214,7 +1310,8 @@ func set_cumulus_visible(value: bool) -> void:
 		return
 	cumulus_visible = value
 	sky_material.set_shader_parameter("cumulus_visible", value)
-	
+	_check_cloud_processing()
+
 
 func set_cumulus_day_color(value: Color) -> void:
 	if value == cumulus_day_color:
@@ -1350,45 +1447,6 @@ func update_cumulus_mie_anisotropy() -> void:
 	cumulus_material.set_shader_parameter("cumulus_partial_mie_phase", partial)
 
 
-func set_cumulus_size(value: float) -> void:
-	if value == cumulus_size:
-		return
-	cumulus_size = value
-	update_cumulus_size()
-
-
-func update_cumulus_size() -> void:
-	if !is_scene_built:
-		return
-	cumulus_material.set_shader_parameter("cumulus_size", cumulus_size)
-
-
-func set_cumulus_direction(value: Vector3) -> void:
-	if value == cumulus_direction:
-		return
-	cumulus_direction = value
-	update_cumulus_direction()
-
-
-func update_cumulus_direction() -> void:
-	if !is_scene_built:
-		return
-	cumulus_material.set_shader_parameter("cumulus_direction", cumulus_direction)
-
-
-func set_cumulus_speed(value: float) -> void:
-	if value == cumulus_speed:
-		return
-	cumulus_speed = value
-	update_cumulus_speed()
-
-
-func update_cumulus_speed() -> void:
-	if !is_scene_built:
-		return
-	cumulus_material.set_shader_parameter("cumulus_speed", cumulus_speed)
-
-
 func _set_cumulus_texture(value: Texture2D) -> void:
 	if value == cumulus_texture:
 		return
@@ -1401,6 +1459,18 @@ func update_cumulus_texture() -> void:
 		return
 	cumulus_material.set_shader_parameter("cumulus_texture", cumulus_texture)
 
+
+func set_cumulus_size(value: float) -> void:
+	if value == cumulus_size:
+		return
+	cumulus_size = value
+	update_cumulus_size()
+
+
+func update_cumulus_size() -> void:
+	if !is_scene_built:
+		return
+	cumulus_material.set_shader_parameter("cumulus_size", cumulus_size)
 
 
 #####################

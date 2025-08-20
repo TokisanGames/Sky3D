@@ -401,6 +401,30 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 
 #####################
+## Weather
+#####################
+
+@export_group("Weather")
+
+## Sets the wind speed. Alias for SkyDome.wind_speed.
+@export_custom(PROPERTY_HINT_RANGE, "0,120,0.1,or_greater,or_less,suffix:m/s") var wind_speed: float = 1.0:
+	set(value):
+		if sky:
+			sky.wind_speed = value
+	get:
+		return sky.wind_speed if sky else wind_speed
+
+## Sets the wind direction. Zero means the wind is coming from the north, 90 from the east,
+## 180 from the south and 270 (or -90) from the west. Alias for SkyDome.wind_direction.
+@export_custom(PROPERTY_HINT_RANGE, "-180,180,0.1,radians_as_degrees") var wind_direction: float = 0.0:
+	set(value):
+		if sky:
+			sky.wind_direction = value
+	get:
+		return sky.wind_direction if sky else wind_direction
+
+
+#####################
 ## Overlays
 #####################
 

@@ -70,3 +70,4 @@ static func spherical_to_cartesian(theta: float, azimuth: float, radius: float =
 	ret.y = cos(theta)
 	ret.z = sinTheta * cos(azimuth)
 	return ret * radius
+	

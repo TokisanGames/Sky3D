@@ -989,7 +989,7 @@ func update_sun_light_energy() -> void:
 	# Light energy should depend on how much of the sun disk is visible.
 	var y: float = sun_direction().y
 	var sun_light_factor: float = TOD_Math.saturate((y + sun_disk_size) / (2.0 * sun_disk_size));
-	_sun_light_node.light_energy = TOD_Math.lerp_f(0.0, sun_light_energy, sun_light_factor)
+	_sun_light_node.light_energy = lerpf(0.0, sun_light_energy, sun_light_factor)
 	
 	if is_equal_approx(_sun_light_node.light_energy, 0.0) and _sun_light_node.shadow_enabled:
 		_sun_light_node.shadow_enabled = false
@@ -1038,7 +1038,7 @@ func update_moon_light_energy() -> void:
 	if not _moon_light_node or not moon_light_enabled:
 		return
 	
-	var l: float = TOD_Math.lerp_f(0.0, moon_light_energy, _moon_light_altitude_mult)
+	var l: float = lerpf(0.0, moon_light_energy, _moon_light_altitude_mult)
 	l *= atm_moon_phases_mult()
 	
 	var fade: float = (1.0 - sun_direction().y) * 0.5

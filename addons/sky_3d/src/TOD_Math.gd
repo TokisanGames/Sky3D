@@ -33,10 +33,6 @@ static func rev(val: float) -> float:
 	return val - int(floor(val / 360.0)) * 360.0
 
 
-static func lerp_f(from: float, to: float, t: float) -> float:
-	return (1 - t) * from + t * to
-
-
 static func plerp_vec3(from: Vector3, to: Vector3, t: float) -> Vector3:
 	var ret: Vector3 
 	ret.x = (1 - t) * from.x + t * to.x

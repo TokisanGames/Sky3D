@@ -63,15 +63,10 @@ static func distance(a: Vector3, b: Vector3) -> float:
 	return sqrt(ret)
 
 
-static func to_orbit(theta: float, pi: float, radius: float = 1.0) -> Vector3:
+static func spherical_to_cartesian(theta: float, azimuth: float, radius: float = 1.0) -> Vector3:
 	var ret: Vector3 
 	var sinTheta:  float = sin(theta)
-	var cosTheta:  float = cos(theta)
-	var sinPI:     float = sin(pi)
-	var cosPI:     float = cos(pi)
-
-	ret.x = sinTheta * sinPI
-	ret.y = cosTheta
-	ret.z = sinTheta * cosPI
+	ret.x = sinTheta * sin(azimuth)
+	ret.y = cos(theta)
+	ret.z = sinTheta * cos(azimuth)
 	return ret * radius
-	

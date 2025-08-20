@@ -314,7 +314,7 @@ func update_sun_coords() -> void:
 	var altitude: float = sun_altitude * TOD_Math.DEG_TO_RAD
 	
 	# Position the sun on a unit sphere, orienting the light to the origin, mimicking a star orbiting a planet.
-	_sun_transform.origin = TOD_Math.to_orbit(altitude, azimuth)
+	_sun_transform.origin = TOD_Math.spherical_to_cartesian(altitude, azimuth)
 	_sun_transform = _sun_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
 	
 	fog_material.set_shader_parameter("sun_direction", sun_direction())
@@ -392,7 +392,7 @@ func update_moon_coords() -> void:
 	var azimuth: float = moon_azimuth * TOD_Math.DEG_TO_RAD
 	var altitude: float = moon_altitude * TOD_Math.DEG_TO_RAD
 	
-	_moon_transform.origin = TOD_Math.to_orbit(altitude, azimuth)
+	_moon_transform.origin = TOD_Math.spherical_to_cartesian(altitude, azimuth)
 	_moon_transform = _moon_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
 	
 	var moon_basis: Basis = get_parent().moon.get_global_transform().basis.inverse()

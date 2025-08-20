@@ -452,6 +452,50 @@ func update_day_night(force: bool = false) -> void:
 
 
 #####################
+## Weather
+#####################
+
+@export_group("Weather")
+
+# Converts the wind speed from m/s to "shader units" to get clouds moving at a "realistic" speed.
+# Note that "realistic" is an estimate as there is no such thing as an altitude for these clouds.
+const WIND_SPEED_FACTOR = 0.01
+## Sets the wind speed.
+@export_custom(PROPERTY_HINT_RANGE, "0,120,0.1,or_greater,or_less,suffix:m/s") var wind_speed: float = 1.0:
+	set(value):
+		if sky:
+			sky.clouds_speed = value * WIND_SPEED_FACTOR
+	get:
+		return sky.clouds_speed / WIND_SPEED_FACTOR if sky else wind_speed
+
+# Zero degrees means the wind is coming from the north, but the shader uses the +X axis as zero, so
+# we need to convert between the two with this offset.
+const WIND_DIRECTION_OFFSET = deg_to_rad(-90)
+## Sets the wind direction.
+@export_custom(PROPERTY_HINT_RANGE, "-180,180,0.1,radians_as_degrees") var wind_direction: float = 0.0:
+	set(value):
+		sky.clouds_direction = Vector2.from_angle(value + WIND_DIRECTION_OFFSET)
+		# We set this value here explicitly to prevent it from "wrapping around" at the edges.
+		# That would otherwise happen with a non-zero WIND_DIRECTION_OFFSET on either end of the
+		# slider (depending on the sign of that offset). We hold on to it here make sure the
+		# slider stays at the same edge. See also the 'get' function below.
+		wind_direction = value
+	get:
+		if sky:
+			# If there is a sky dome, we fetch the real wind direction by taking the angle from
+			# the clouds direction vector and correcting it for the offset again.
+			var real_wind_direction = sky.clouds_direction.angle() - WIND_DIRECTION_OFFSET
+			# What we do here is see if the wind direction we've stored in the property, as
+			# explained in 'set' above, is approximately equal to the direction we've just
+			# retrieved from the sky dome. This will be the case if we were the last to set it
+			# but it won't be if someone else directly changed it in the sky dome, so only
+			# use the value from the sky dome if it's different.
+			return wind_direction if is_zero_approx(wrapf(wind_direction - real_wind_direction, 0, TAU)) else real_wind_direction
+		else:
+			return wind_direction
+
+
+#####################
 ## Setup
 #####################
 

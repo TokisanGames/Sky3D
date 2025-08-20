@@ -91,8 +91,7 @@ uniform float clouds_sky_tint_fade = 0.5;
 uniform float clouds_intensity = 10.0;
 uniform float clouds_size = 2.0;
 uniform vec2 clouds_uv = vec2(0.16, 0.11);
-uniform float clouds_speed = 0.07;
-uniform vec2 clouds_direction = vec2(0.25);
+uniform vec2 clouds_position = vec2(0.0);
 uniform vec4 clouds_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
 uniform vec4 clouds_horizon_light_color: source_color = vec4(0.98, 0.43, 0.15, 1.0);
 uniform vec4 clouds_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
@@ -107,8 +106,7 @@ uniform float cumulus_clouds_noise_freq = 2.7;
 uniform float cumulus_clouds_sky_tint_fade = 0.0;
 uniform float cumulus_clouds_intensity = 1.0;
 uniform float cumulus_clouds_size = 0.5;
-uniform float cumulus_clouds_speed = 0.05;
-uniform vec3 cumulus_clouds_direction = vec3(0.25, 0.1, 0.25);
+uniform vec3 cumulus_clouds_position = vec3(0.0);
 uniform sampler2D cumulus_clouds_texture;
 uniform vec4 cumulus_clouds_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
 uniform vec4 cumulus_clouds_horizon_light_color: source_color = vec4(0.98, 0.443, 0.15, 1.0);
@@ -287,12 +285,9 @@ vec3 atmosphericScattering(float sr, float sm, vec2 mu, vec3 mult) {
 
 // Clouds
 //------------------------------------------------------------------------------
-float noiseClouds(vec2 coords, vec2 offset, float p_time) {
-	float speed = p_time * clouds_speed * .5; // .5 matches cumulus clouds
-	vec2 wind = offset * speed;
-	vec2 wind2 = (offset + offset) * speed;
-	float a = textureLod(clouds_texture, coords.xy * clouds_uv - wind, 0.0).r;
-	float b = textureLod(clouds_texture, coords.xy * clouds_uv - wind2, 0.0).r;
+float noiseClouds(vec2 coords) {
+	float a = textureLod(clouds_texture, coords.xy * clouds_uv + 0.5 * clouds_position, 0.0).r;
+	float b = textureLod(clouds_texture, coords.xy * clouds_uv + 0.6 * clouds_position, 0.0).r;
 	return ((a + b) * 0.5);
 }
 
@@ -320,11 +315,10 @@ float cloudsFBM(vec3 p, float l) {
 	return ret;
 }
 
-float cloudsDensity(vec2 p, vec2 offset, float p_time) {
-	float d = noiseClouds(p, offset, p_time);
+float cloudsDensity(vec2 p) {
+	float d = noiseClouds(p);
 	float c = 1.0 - clouds_coverage;
 	d = d - c;
-	//d += d;
 	return saturate(d);
 }
 
@@ -341,10 +335,10 @@ float cloudsDensityCumulus(vec3 p, vec3 offset, float t) {
 	return saturate(dens);
 }
 
-vec4 renderClouds(vec3 pos, float p_time) {
+vec4 renderClouds(vec3 pos) {
 	pos.xy = pos.xz / pos.y;
 	pos *= clouds_size;
-	float density = cloudsDensity(pos.xy, clouds_direction, p_time);
+	float density = cloudsDensity(pos.xy);
 	float sh = saturate(exp(-clouds_absorption * density));
 	float a = saturate(density * clouds_thickness);
 	return vec4(vec3(density*sh) * clouds_intensity, a);
@@ -352,7 +346,7 @@ vec4 renderClouds(vec3 pos, float p_time) {
 
 vec4 renderCloudsCumulus(vec3 ro, vec3 rd, float am, vec3 sunPosition, vec3 moonPosition, float p_time) {
 	vec4 ret = vec4(0, 0, 0, 0);
-	vec3 wind = cumulus_clouds_direction * (p_time * cumulus_clouds_speed);
+	vec3 wind = cumulus_clouds_position;
 	float a = 0.0;
 
 	// n and tt doesnt need to be initialized since it would be set by IntersectSphere
@@ -456,7 +450,7 @@ vec3 render_sky(vec3 worldPos, vec3 cloudsPos, vec3 sunPosition, vec3 moonPositi
 
 	// Clouds
 	if (clouds_visible) {
-		vec4 clouds = renderClouds(cloudsPos, p_time);
+		vec4 clouds = renderClouds(cloudsPos);
 		clouds.a = saturate(clouds.a);
 		clouds.rgb *= mix(mix(clouds_day_color.rgb, clouds_horizon_light_color.rgb, angle_mult.x), clouds_night_color.rgb, angle_mult.w);
 

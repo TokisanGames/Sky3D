@@ -90,8 +90,9 @@ uniform float clouds_absorption = 2.0;
 uniform float clouds_sky_tint_fade = 0.5;
 uniform float clouds_intensity = 10.0;
 uniform float clouds_size = 2.0;
-uniform vec2 clouds_uv = vec2(0.16, 0.11);
-uniform vec2 clouds_position = vec2(0.0);
+uniform vec2 clouds_uv_scale = vec2(0.16, 0.11); // uv scale
+uniform vec2 clouds_uv_position1 = vec2(0.0); // uv pos (0.5*)
+uniform vec2 clouds_uv_position2 = vec2(0.0); // uv pos2 (0.6*)
 uniform vec4 clouds_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
 uniform vec4 clouds_horizon_light_color: source_color = vec4(0.98, 0.43, 0.15, 1.0);
 uniform vec4 clouds_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
@@ -106,7 +107,9 @@ uniform float cumulus_clouds_noise_freq = 2.7;
 uniform float cumulus_clouds_sky_tint_fade = 0.0;
 uniform float cumulus_clouds_intensity = 1.0;
 uniform float cumulus_clouds_size = 0.5;
-uniform vec3 cumulus_clouds_position = vec3(0.0);
+uniform vec3 cumulus_clouds_position1 = vec3(0.0);
+uniform vec3 cumulus_clouds_position2 = vec3(0.0);
+uniform float cumulus_clouds_mix = 0.0;
 uniform sampler2D cumulus_clouds_texture;
 uniform vec4 cumulus_clouds_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
 uniform vec4 cumulus_clouds_horizon_light_color: source_color = vec4(0.98, 0.443, 0.15, 1.0);
@@ -286,8 +289,8 @@ vec3 atmosphericScattering(float sr, float sm, vec2 mu, vec3 mult) {
 // Clouds
 //------------------------------------------------------------------------------
 float noiseClouds(vec2 coords) {
-	float a = textureLod(clouds_texture, coords.xy * clouds_uv + 0.5 * clouds_position, 0.0).r;
-	float b = textureLod(clouds_texture, coords.xy * clouds_uv + 0.6 * clouds_position, 0.0).r;
+	float a = textureLod(clouds_texture, coords.xy * clouds_uv_scale + clouds_uv_position1, 0.0).r;
+	float b = textureLod(clouds_texture, coords.xy * clouds_uv_scale + clouds_uv_position2, 0.0).r;
 	return ((a + b) * 0.5);
 }
 
@@ -298,6 +301,7 @@ float noiseCloudsCumulus(vec3 p) {
 	vec4 uv = vec4(0.0);
 	uv.xy = pos.xy + offset * floor(pos.z);
 	uv.zw = uv.xy + offset;
+	
 	float x1 = textureLod(cumulus_clouds_texture, uv.xy, 0.0).r;
 	float x2 = textureLod(cumulus_clouds_texture, uv.zw, 0.0).r;
 	return mix(x1, x2, fract(pos.z));
@@ -346,7 +350,6 @@ vec4 renderClouds(vec3 pos) {
 
 vec4 renderCloudsCumulus(vec3 ro, vec3 rd, float am, vec3 sunPosition, vec3 moonPosition, float p_time) {
 	vec4 ret = vec4(0, 0, 0, 0);
-	vec3 wind = cumulus_clouds_position;
 	float a = 0.0;
 
 	// n and tt doesnt need to be initialized since it would be set by IntersectSphere
@@ -363,16 +366,34 @@ vec4 renderCloudsCumulus(vec3 ro, vec3 rd, float am, vec3 sunPosition, vec3 moon
 		vec4 t = vec4(1.0);
 		t.rgb += (mph.rgb * cumulus_clouds_mie_intensity);
 
-		for(int i = 0; i < kCUMULUS_CLOUDS_STEP; i++) {
-			float h = float(i) * 0.1; // / float(kCLOUDS_STEP);
-			float density = cloudsDensityCumulus(pos, wind, h);
+		for (int i = 0; i < kCUMULUS_CLOUDS_STEP; i++) {
+			float h = float(i) * 0.1;
+			float density = cloudsDensityCumulus(pos, cumulus_clouds_position1, h);
 			float sh = saturate(exp(-cumulus_clouds_absorption * density * marchStep));
 			t *= sh;
 			ret += (t * (exp(h) * 0.571428571) * density * marchStep);
 			a += (1.0 - sh) * (1.0 - a);
 			pos += dirStep;
 		}
-		return vec4(ret.rgb * cumulus_clouds_intensity, a);
+		vec4 ret2 = vec4(0, 0, 0, 0);
+		float a2 = 0.0;
+		pos = n * cumulus_clouds_size;
+		t = vec4(1.0);
+		t.rgb += (mph.rgb * cumulus_clouds_mie_intensity);
+		for (int i = 0; i < kCUMULUS_CLOUDS_STEP; i++) {
+			float h = float(i) * 0.1;
+			float density = cloudsDensityCumulus(pos, cumulus_clouds_position2, h);
+			float sh = saturate(exp(-cumulus_clouds_absorption * density * marchStep));
+			t *= sh;
+			ret2 += (t * (exp(h) * 0.571428571) * density * marchStep);
+			a2 += (1.0 - sh) * (1.0 - a2);
+			pos += dirStep;
+		}
+		float cloud1_alpha = clamp(a * (1.0 - cumulus_clouds_mix), 0, 1);
+		vec4 cloud1_rgba = vec4(ret.rgb * cloud1_alpha, cloud1_alpha);
+		float cloud2_alpha = clamp(a2 * cumulus_clouds_mix, 0, 1);
+		vec4 cloud2_rgba = vec4(ret2.rgb * cloud2_alpha, cloud2_alpha);
+		return cloud1_rgba + cloud2_rgba;
 	}
 	return vec4(ret.rgb * cumulus_clouds_intensity, a);
 }

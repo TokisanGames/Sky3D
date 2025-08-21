@@ -474,7 +474,8 @@ const WIND_DIRECTION_OFFSET: float = deg_to_rad(-90)
 ## Sets the wind direction.
 @export_custom(PROPERTY_HINT_RANGE, "-180,180,0.1,radians_as_degrees") var wind_direction: float = 0.0:
 	set(value):
-		sky.clouds_direction = Vector2.from_angle(value + WIND_DIRECTION_OFFSET)
+		if sky:
+			sky.clouds_direction = Vector2.from_angle(value + WIND_DIRECTION_OFFSET)
 		# We set this value here explicitly to prevent it from "wrapping around" at the edges.
 		# That would otherwise happen with a non-zero WIND_DIRECTION_OFFSET on either end of the
 		# slider (depending on the sign of that offset). We hold on to it here make sure the

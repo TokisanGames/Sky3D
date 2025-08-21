@@ -14,6 +14,7 @@ signal year_changed(value)
 var _update_timer: Timer
 var _last_update: int = 0
 
+const TOTAL_HOURS: int = 24
 
 #####################
 ## Global 
@@ -178,7 +179,7 @@ func set_year(value: int) -> void:
 
 
 func is_leap_year() -> bool:
-	return DateTimeUtil.compute_leap_year(year)
+	return (year % 4 == 0) && (year % 100 != 0) || (year % 400 == 0)
 
 
 func max_days_per_month() -> int:
@@ -285,8 +286,8 @@ func _get_oblecl() -> float:
 #####################
 
 
-func set_time(hour: int, minute: int, second: int) -> void:
-	set_total_hours(DateTimeUtil.hours_to_total_hours(hour, minute, second))
+func set_time(hour: int, minute: int, second: int) -> void: 
+	set_total_hours(float(hour) + float(minute) / 60.0 + float(second) / 3600.0)
 
 
 func set_from_datetime_dict(datetime_dict: Dictionary) -> void:
@@ -318,7 +319,7 @@ func get_unix_timestamp() -> int:
 
 func _progress_time(delta: float) -> void:
 	if not is_zero_approx(time_cycle_duration()):
-		set_total_hours(total_hours + delta / time_cycle_duration() * DateTimeUtil.TOTAL_HOURS)
+		set_total_hours(total_hours + delta / time_cycle_duration() * TOTAL_HOURS)
 
 
 func _get_date_time_os() -> void:

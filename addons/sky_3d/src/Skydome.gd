@@ -402,7 +402,7 @@ func update_moon_coords() -> void:
 		_moon_light_node.transform = _moon_transform
 	emit_signal("moon_transform_changed", _moon_transform)
 	
-	_moon_light_altitude_mult = TOD_Math.saturate(moon_direction().y)
+	_moon_light_altitude_mult = clampf(moon_direction().y, 0, 1)
 	
 	update_night_intensity()
 	set_moon_light_color(moon_light_color)
@@ -677,19 +677,19 @@ func update_atm_moon_mie_anisotropy() -> void:
 func atm_moon_phases_mult() -> float:
 	if not atm_enable_moon_scatter_mode:
 		return atm_night_intensity()
-	return TOD_Math.saturate(-sun_direction().dot(moon_direction()) + 0.60)
+	return clampf(-sun_direction().dot(moon_direction()) + 0.60, 0, 1)
 
 
 func atm_night_intensity() -> float:
 	if not atm_enable_moon_scatter_mode:
-		return TOD_Math.saturate(-sun_direction().y + 0.30)
-	return TOD_Math.saturate(moon_direction().y) * atm_moon_phases_mult()
+		return clampf(-sun_direction().y + 0.30, 0, 1)
+	return clampf(moon_direction().y, 0, 1) * atm_moon_phases_mult()
 
 
 func fog_atm_night_intensity() -> float:
 	if not atm_enable_moon_scatter_mode:
-		return TOD_Math.saturate(-sun_direction().y + 0.70)
-	return TOD_Math.saturate(-sun_direction().y) * atm_moon_phases_mult()
+		return clampf(-sun_direction().y + 0.70, 0, 1)
+	return clampf(-sun_direction().y, 0, 1) * atm_moon_phases_mult()
 	
 	
 #####################
@@ -964,8 +964,8 @@ func set_sun_light_color(value: Color) -> void:
 func update_sun_light_color() -> void:
 	if not _sun_light_node:
 		return
-	var sun_light_altitude_mult: float = TOD_Math.saturate(sun_direction().y * 2.0)
-	_sun_light_node.light_color = TOD_Math.plerp_color(sun_horizon_light_color, sun_light_color, sun_light_altitude_mult)
+	var sun_light_altitude_mult: float = clampf(sun_direction().y * 2.0, 0, 1)
+	_sun_light_node.light_color = sun_horizon_light_color.lerp(sun_light_color, sun_light_altitude_mult)
 
 
 func set_sun_horizon_light_color(value: Color) -> void:
@@ -988,7 +988,7 @@ func update_sun_light_energy() -> void:
 	
 	# Light energy should depend on how much of the sun disk is visible.
 	var y: float = sun_direction().y
-	var sun_light_factor: float = TOD_Math.saturate((y + sun_disk_size) / (2.0 * sun_disk_size));
+	var sun_light_factor: float = clampf((y + sun_disk_size) / (2.0 * sun_disk_size), 0, 1);
 	_sun_light_node.light_energy = lerpf(0.0, sun_light_energy, sun_light_factor)
 	
 	if is_equal_approx(_sun_light_node.light_energy, 0.0) and _sun_light_node.shadow_enabled:
@@ -1577,8 +1577,8 @@ func set_environment(value: Environment) -> void:
 func _update_environment() -> void:
 	if not _enable_environment or not _sun_light_node:
 		return
-	var factor: float = TOD_Math.saturate(-sun_direction().y + 0.60)
-	var col: Color = TOD_Math.plerp_color(_sun_light_node.light_color, atm_night_tint * atm_night_intensity(), factor)
+	var factor: float = clampf(-sun_direction().y + 0.60, 0, 1)
+	var col: Color = _sun_light_node.light_color.lerp(atm_night_tint * atm_night_intensity(), factor)
 	col.a = 1.
 	col.v = clamp(col.v, .35, 1.)
 	environment.ambient_light_color = col

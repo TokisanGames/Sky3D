@@ -459,7 +459,7 @@ func update_day_night(force: bool = false) -> void:
 
 # Converts the wind speed from m/s to "shader units" to get clouds moving at a "realistic" speed.
 # Note that "realistic" is an estimate as there is no such thing as an altitude for these clouds.
-const WIND_SPEED_FACTOR = 0.01
+const WIND_SPEED_FACTOR: float = 0.01
 ## Sets the wind speed.
 @export_custom(PROPERTY_HINT_RANGE, "0,120,0.1,or_greater,or_less,suffix:m/s") var wind_speed: float = 1.0:
 	set(value):
@@ -470,7 +470,7 @@ const WIND_SPEED_FACTOR = 0.01
 
 # Zero degrees means the wind is coming from the north, but the shader uses the +X axis as zero, so
 # we need to convert between the two with this offset.
-const WIND_DIRECTION_OFFSET = deg_to_rad(-90)
+const WIND_DIRECTION_OFFSET: float = deg_to_rad(-90)
 ## Sets the wind direction.
 @export_custom(PROPERTY_HINT_RANGE, "-180,180,0.1,radians_as_degrees") var wind_direction: float = 0.0:
 	set(value):

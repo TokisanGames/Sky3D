@@ -677,7 +677,7 @@ func update_atm_moon_mie_anisotropy() -> void:
 func atm_moon_phases_mult() -> float:
 	if not atm_enable_moon_scatter_mode:
 		return atm_night_intensity()
-	return clampf(-sun_direction().dot(moon_direction()) + 0.60, 0, 1)
+	return clampf(-sun_direction().dot(moon_direction()) + 0.60, 0., 1.)
 
 
 func atm_night_intensity() -> float:

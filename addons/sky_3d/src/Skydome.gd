@@ -1396,8 +1396,6 @@ func update_clouds_texture() -> void:
 @export var clouds_cumulus_mie_intensity: float = 1.0: set = set_clouds_cumulus_mie_intensity
 @export_range(0.0, 0.9999999, 0.0000001) var clouds_cumulus_mie_anisotropy: float = 0.206: set = set_clouds_cumulus_mie_anisotropy
 @export var clouds_cumulus_size: float = 0.5: set = set_clouds_cumulus_size
-@export var clouds_cumulus_direction: Vector3 = Vector3(0.25, 0.1, 0.25): set = set_clouds_cumulus_direction
-@export var clouds_cumulus_speed: float = 0.05: set = set_clouds_cumulus_speed
 @export var clouds_cumulus_texture: Texture2D = Sky3D.clouds_cumulus_texture: set = _set_clouds_cumulus_texture
 
 
@@ -1553,18 +1551,6 @@ func update_clouds_cumulus_size() -> void:
 	if !is_scene_built:
 		return
 	clouds_cumulus_material.set_shader_parameter("cumulus_clouds_size", clouds_cumulus_size)
-
-
-func set_clouds_cumulus_direction(value: Vector3) -> void:
-	if value == clouds_cumulus_direction:
-		return
-	clouds_cumulus_direction = value
-
-
-func set_clouds_cumulus_speed(value: float) -> void:
-	if value == clouds_cumulus_speed:
-		return
-	clouds_cumulus_speed = value
 
 
 func _set_clouds_cumulus_texture(value: Texture2D) -> void:

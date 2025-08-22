@@ -90,13 +90,13 @@ uniform float clouds_absorption = 2.0;
 uniform float clouds_sky_tint_fade = 0.5;
 uniform float clouds_intensity = 10.0;
 uniform float clouds_size = 2.0;
-uniform vec2 clouds_uv_scale = vec2(0.16, 0.11); // uv scale
 uniform vec2 clouds_uv_position1 = vec2(0.0);
 uniform vec2 clouds_uv_position2 = vec2(0.0);
 uniform vec4 clouds_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
 uniform vec4 clouds_horizon_light_color: source_color = vec4(0.98, 0.43, 0.15, 1.0);
 uniform vec4 clouds_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
 uniform sampler2D clouds_texture;
+const vec2 clouds_uv_scale = vec2(0.16, 0.11);
 
 group_uniforms Cumulus_Clouds;
 uniform bool cumulus_clouds_visible = true;

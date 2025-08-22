@@ -964,7 +964,7 @@ func set_sun_light_color(value: Color) -> void:
 func update_sun_light_color() -> void:
 	if not _sun_light_node:
 		return
-	var sun_light_altitude_mult: float = clampf(sun_direction().y * 2.0, 0, 1)
+	var sun_light_altitude_mult: float = clampf(sun_direction().y * 2.0, 0., 1.)
 	_sun_light_node.light_color = sun_horizon_light_color.lerp(sun_light_color, sun_light_altitude_mult)
 
 

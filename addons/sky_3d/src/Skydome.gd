@@ -1577,7 +1577,7 @@ func set_environment(value: Environment) -> void:
 func _update_environment() -> void:
 	if not _enable_environment or not _sun_light_node:
 		return
-	var factor: float = clampf(-sun_direction().y + 0.60, 0, 1)
+	var factor: float = clampf(-sun_direction().y + 0.60, 0., 1.)
 	var col: Color = _sun_light_node.light_color.lerp(atm_night_tint * atm_night_intensity(), factor)
 	col.a = 1.
 	col.v = clamp(col.v, .35, 1.)

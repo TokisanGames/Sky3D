@@ -109,9 +109,11 @@ func _ready() -> void:
 	update_clouds_cumulus_mie_anisotropy()
 	update_clouds_cumulus_size()
 	update_clouds_cumulus_texture()
+	update_clouds_cumulus_clouds_mix()
 	
 	# Environment
 	_update_environment()
+
 
 # If the cloud layer is further away from the origin than this, we will start
 # fading it out as it's then getting close to values that loose too much
@@ -129,34 +131,36 @@ const cloud_range_end: float = cloud_range + cloud_range_transition_period
 const cloud_range_transition_inverse: float = 1.0 / cloud_range_transition_period
 
 func _process(delta: float) -> void:
-	# process the 2D clouds
-	var position_delta = clouds_speed * delta * clouds_direction
-	clouds_position1 = (clouds_position1 + position_delta).posmod(1.0)
-	clouds_position2 = (clouds_position2 + position_delta * 1.1).posmod(1.0)
-	sky_material.set_shader_parameter("clouds_uv_position1", clouds_position1)
-	sky_material.set_shader_parameter("clouds_uv_position2", clouds_position2)
+	# Process the 2D clouds if they are visible.
+	if clouds_visible:
+		var position_delta := clouds_speed * delta * clouds_direction
+		clouds_position1 = (clouds_position1 + position_delta).posmod(1.0)
+		clouds_position2 = (clouds_position2 + position_delta * 1.1).posmod(1.0)
+		sky_material.set_shader_parameter("clouds_uv_position1", clouds_position1)
+		sky_material.set_shader_parameter("clouds_uv_position2", clouds_position2)
 
-	# process the cumulus clouds
-	if clouds_cumulus_mix < 1:
-		clouds_cumulus_position1 = clouds_cumulus_position1 + position_delta
-	if clouds_cumulus_mix > 0:
-		clouds_cumulus_position2 = clouds_cumulus_position2 + position_delta
+	# Process the cumulus clouds if they are visible.
+	if clouds_cumulus_visible:
+		var position_delta := clouds_speed * delta * clouds_direction
+		if clouds_cumulus_mix < 1.0:
+			clouds_cumulus_position1 = clouds_cumulus_position1 + position_delta
+			var len1 := clouds_cumulus_position1.length()
+			if len1 >= cloud_range:
+				clouds_cumulus_mix = clampf((len1 - cloud_range) * cloud_range_transition_inverse, 0.0, 1.0)
+				clouds_cumulus_material.set_shader_parameter("cumulus_clouds_mix", clouds_cumulus_mix)
+				if len1 > cloud_range_end:
+					clouds_cumulus_position1 = Vector2(0.0, 0.0)
+			clouds_cumulus_material.set_shader_parameter("cumulus_clouds_position1", -Vector3(clouds_cumulus_position1.x, 0.0, clouds_cumulus_position1.y))
 
-	var len1 = clouds_cumulus_position1.length()
-	if len1 >= cloud_range:
-		clouds_cumulus_mix = clampf((len1 - cloud_range) * cloud_range_transition_inverse, 0, 1.0)
-		if len1 > cloud_range_end:
-			clouds_cumulus_position1 = Vector2(0, 0)
-
-	var len2 = clouds_cumulus_position2.length()
-	if len2 >= cloud_range:
-		clouds_cumulus_mix = clampf((cloud_range_end - len2) * cloud_range_transition_inverse, 0, 1.0)
-		if len2 > cloud_range_end:
-			clouds_cumulus_position2 = Vector2(0, 0)
-
-	sky_material.set_shader_parameter("cumulus_clouds_mix", clouds_cumulus_mix)
-	sky_material.set_shader_parameter("cumulus_clouds_position1", -Vector3(clouds_cumulus_position1.x, 0.0, clouds_cumulus_position1.y))
-	sky_material.set_shader_parameter("cumulus_clouds_position2", -Vector3(clouds_cumulus_position2.x, 0.0, clouds_cumulus_position2.y))
+		if clouds_cumulus_mix > 0.0:
+			clouds_cumulus_position2 = clouds_cumulus_position2 + position_delta
+			var len2 := clouds_cumulus_position2.length()
+			if len2 >= cloud_range:
+				clouds_cumulus_mix = clampf((cloud_range_end - len2) * cloud_range_transition_inverse, 0.0, 1.0)
+				clouds_cumulus_material.set_shader_parameter("cumulus_clouds_mix", clouds_cumulus_mix)
+				if len2 > cloud_range_end:
+					clouds_cumulus_position2 = Vector2(0.0, 0.0)
+			clouds_cumulus_material.set_shader_parameter("cumulus_clouds_position2", -Vector3(clouds_cumulus_position2.x, 0.0, clouds_cumulus_position2.y))
 
 
 func build_scene() -> void:
@@ -1574,6 +1578,13 @@ func update_clouds_cumulus_texture() -> void:
 	if !is_scene_built:
 		return
 	clouds_cumulus_material.set_shader_parameter("cumulus_clouds_texture", clouds_cumulus_texture)
+
+
+func update_clouds_cumulus_clouds_mix() -> void:
+	if !is_scene_built:
+		return
+	clouds_cumulus_material.set_shader_parameter("cumulus_clouds_mix", clouds_cumulus_mix)
+
 
 
 #####################

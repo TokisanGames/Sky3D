@@ -1248,7 +1248,7 @@ func set_stars_scintillation_speed(value: float) -> void:
 @export var clouds_size: float = 2.0: set = set_clouds_size
 @export var clouds_uv: Vector2 = Vector2(0.16, 0.11): set = set_clouds_uv
 @export var clouds_direction: Vector2 = Vector2(0.25, 0.25): set = set_clouds_direction
-@export var clouds_speed: float = 0.07: set = set_clouds_speed
+@export_range(0.0, 7.0, 0.001) var clouds_speed: float = 0.07: set = set_clouds_speed
 @export var clouds_texture: Texture2D = Sky3D.clouds_texture: set = _set_clouds_texture
 var clouds_position1: Vector2 = Vector2(0.0, 0.0)
 var clouds_position2: Vector2 = Vector2(0.0, 0.0)

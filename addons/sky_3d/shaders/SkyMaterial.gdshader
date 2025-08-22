@@ -349,34 +349,35 @@ vec4 renderClouds(vec3 pos) {
 }
 
 vec4 renderCloudsCumulus(vec3 ro, vec3 rd, float am, vec3 sunPosition, vec3 moonPosition, float p_time) {
-	vec4 ret = vec4(0, 0, 0, 0);
-	float a = 0.0;
-
 	// n and tt doesnt need to be initialized since it would be set by IntersectSphere
 	vec3 n; float tt;
 	if (IntersectSphere(500, ro, rd, tt, n)) {
+		vec4 t; vec3 pos; float a; // initialized below before use
 		float marchStep = float(kCUMULUS_CLOUDS_STEP) * cumulus_clouds_thickness;
 		vec3 dirStep = rd / rd.y * marchStep;
-		vec3 pos = n * cumulus_clouds_size;
-
 		vec2 mu = vec2(dot(sunPosition, rd), dot(moonPosition, rd));
 		vec3 mph = ((miePhase(mu.x, cumulus_clouds_partial_mie_phase) * atm_sun_mie_tint.rgb) +
 			miePhase(mu.y, cumulus_clouds_partial_mie_phase) * am);
 
-		vec4 t = vec4(1.0);
+		vec4 ret1 = vec4(0, 0, 0, 0);
+		a = 0.0;
+		pos = n * cumulus_clouds_size;
+		t = vec4(1.0);
 		t.rgb += (mph.rgb * cumulus_clouds_mie_intensity);
-
 		for (int i = 0; i < kCUMULUS_CLOUDS_STEP; i++) {
 			float h = float(i) * 0.1;
 			float density = cloudsDensityCumulus(pos, cumulus_clouds_position1, h);
 			float sh = saturate(exp(-cumulus_clouds_absorption * density * marchStep));
 			t *= sh;
-			ret += (t * (exp(h) * 0.571428571) * density * marchStep);
+			ret1 += (t * (exp(h) * 0.571428571) * density * marchStep);
 			a += (1.0 - sh) * (1.0 - a);
 			pos += dirStep;
 		}
+		a = clamp(a * (1.0 - cumulus_clouds_mix), 0, 1);
+		ret1 = vec4(ret1.rgb * a, a);
+
 		vec4 ret2 = vec4(0, 0, 0, 0);
-		float a2 = 0.0;
+		a = 0.0;
 		pos = n * cumulus_clouds_size;
 		t = vec4(1.0);
 		t.rgb += (mph.rgb * cumulus_clouds_mie_intensity);
@@ -386,16 +387,15 @@ vec4 renderCloudsCumulus(vec3 ro, vec3 rd, float am, vec3 sunPosition, vec3 moon
 			float sh = saturate(exp(-cumulus_clouds_absorption * density * marchStep));
 			t *= sh;
 			ret2 += (t * (exp(h) * 0.571428571) * density * marchStep);
-			a2 += (1.0 - sh) * (1.0 - a2);
+			a += (1.0 - sh) * (1.0 - a);
 			pos += dirStep;
 		}
-		float cloud1_alpha = clamp(a * (1.0 - cumulus_clouds_mix), 0, 1);
-		vec4 cloud1_rgba = vec4(ret.rgb * cloud1_alpha, cloud1_alpha);
-		float cloud2_alpha = clamp(a2 * cumulus_clouds_mix, 0, 1);
-		vec4 cloud2_rgba = vec4(ret2.rgb * cloud2_alpha, cloud2_alpha);
-		return cloud1_rgba + cloud2_rgba;
+		a = clamp(a * cumulus_clouds_mix, 0, 1);
+		ret2 = vec4(ret2.rgb * a, a);
+
+		return ret1 + ret2;
 	}
-	return vec4(ret.rgb * cumulus_clouds_intensity, a);
+	return vec4(0.0);
 }
 
 vec3 render_sky(vec3 worldPos, vec3 cloudsPos, vec3 sunPosition, vec3 moonPosition, vec3 deep_space_coords, float p_time) {

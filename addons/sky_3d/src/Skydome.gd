@@ -682,7 +682,7 @@ func atm_moon_phases_mult() -> float:
 
 func atm_night_intensity() -> float:
 	if not atm_enable_moon_scatter_mode:
-		return clampf(-sun_direction().y + 0.30, 0, 1)
+		return clampf(-sun_direction().y + 0.30, 0., 1.)
 	return clampf(moon_direction().y, 0, 1) * atm_moon_phases_mult()
 
 

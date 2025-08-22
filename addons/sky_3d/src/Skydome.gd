@@ -402,7 +402,7 @@ func update_moon_coords() -> void:
 		_moon_light_node.transform = _moon_transform
 	emit_signal("moon_transform_changed", _moon_transform)
 	
-	_moon_light_altitude_mult = clampf(moon_direction().y, 0, 1)
+	_moon_light_altitude_mult = clampf(moon_direction().y, 0., 1.)
 	
 	update_night_intensity()
 	set_moon_light_color(moon_light_color)

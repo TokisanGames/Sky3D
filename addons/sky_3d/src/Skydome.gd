@@ -988,7 +988,7 @@ func update_sun_light_energy() -> void:
 	
 	# Light energy should depend on how much of the sun disk is visible.
 	var y: float = sun_direction().y
-	var sun_light_factor: float = clampf((y + sun_disk_size) / (2.0 * sun_disk_size), 0, 1);
+	var sun_light_factor: float = clampf((y + sun_disk_size) / (2.0 * sun_disk_size), 0., 1.);
 	_sun_light_node.light_energy = lerpf(0.0, sun_light_energy, sun_light_factor)
 	
 	if is_equal_approx(_sun_light_node.light_energy, 0.0) and _sun_light_node.shadow_enabled:

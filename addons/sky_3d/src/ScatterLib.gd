@@ -18,7 +18,7 @@ static func compute_wavelenghts_lambda(value: Vector3) -> Vector3:
 	return value * 1e-9
 
 
-static func compute_wavlenghts(lambda: Vector3) -> Vector3:
+static func compute_wavelenghts(lambda: Vector3) -> Vector3:
 	var k = 4.0
 	var ret: Vector3 = lambda
 	ret.x = pow(lambda.x, k)
@@ -28,7 +28,7 @@ static func compute_wavlenghts(lambda: Vector3) -> Vector3:
 
 
 static func compute_beta_ray(wavelenghts: Vector3) -> Vector3:
-	var kr: float =  (8.0 * pow(PI, 3.0) * pow(n2 - 1.0, 2.0) * (6.0 + 3.0 * pn))
+	var kr: float = (8.0 * pow(PI, 3.0) * pow(n2 - 1.0, 2.0) * (6.0 + 3.0 * pn))
 	var ret: Vector3 = 3.0 * N * wavelenghts * (6.0 - 7.0 * pn)
 	ret.x = kr / ret.x
 	ret.y = kr / ret.y
@@ -44,7 +44,6 @@ static func compute_beta_mie(mie: float, turbidity: float) -> Vector3:
 static func get_partial_mie_phase(g: float) -> Vector3:
 	var g2: float = g * g
 	var ret: Vector3
-	# ret.x = ((1.0 - g2) / (2.0 + g2))
 	ret.x = 1.0 - g2
 	ret.y = 1.0 + g2
 	ret.z = 2.0 * g

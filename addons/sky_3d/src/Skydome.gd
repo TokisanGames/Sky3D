@@ -451,7 +451,7 @@ func update_beta_ray() -> void:
 		return
 
 	var wll: Vector3 = ScatterLib.compute_wavelenghts_lambda(atm_wavelengths)
-	var wls: Vector3 = ScatterLib.compute_wavlenghts(wll)
+	var wls: Vector3 = ScatterLib.compute_wavelenghts(wll)
 	var betaRay: Vector3 = ScatterLib.compute_beta_ray(wls)
 	sky_material.set_shader_parameter("atm_beta_ray", betaRay)
 	fog_material.set_shader_parameter("atm_beta_ray", betaRay)

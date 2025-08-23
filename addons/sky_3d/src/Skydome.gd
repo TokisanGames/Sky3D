@@ -266,8 +266,8 @@ func set_equatorial_color(value: Color) -> void:
 @export_range(0.0, 0.5, 0.001) var sun_disk_size: float = 0.02: set = set_sun_disk_size
 @export var sun_light_color: Color = Color.WHITE : set = set_sun_light_color 
 @export var sun_horizon_light_color: Color = Color(.98, 0.523, 0.294, 1.0): set = set_sun_horizon_light_color
-@export_range(-180.0, 180.0, 0.00001) var sun_azimuth: float = 0.0: set = set_sun_azimuth
-@export_range(-180.0, 180.0, 0.00001) var sun_altitude: float = -27.387: set = set_sun_altitude
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_azimuth: float = 0.0: set = set_sun_azimuth
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_altitude: float = -27.387: set = set_sun_altitude
 
 var _sun_transform := Transform3D()
 var sun_light_enabled: bool = true: set = set_sun_light_enabled
@@ -283,14 +283,14 @@ func set_sun_light_enabled(value: bool) -> void:
 
 
 func set_sun_azimuth(value: float) -> void:
-	if value == sun_azimuth:
+	if is_equal_approx(value, sun_azimuth):
 		return
 	sun_azimuth = value
 	update_sun_coords()
 	
 
 func set_sun_altitude(value: float) -> void:
-	if value == sun_altitude:
+	if is_equal_approx(value, sun_altitude):
 		return
 	sun_altitude = value
 	update_sun_coords()
@@ -309,12 +309,9 @@ func update_sun_coords() -> void:
 		return
 	if _sun_light_node:
 		_sun_light_node.visible = true
-
-	var azimuth: float = sun_azimuth * TOD_Math.DEG_TO_RAD
-	var altitude: float = sun_altitude * TOD_Math.DEG_TO_RAD
 	
 	# Position the sun on a unit sphere, orienting the light to the origin, mimicking a star orbiting a planet.
-	_sun_transform.origin = TOD_Math.spherical_to_cartesian(altitude, azimuth)
+	_sun_transform.origin = TOD_Math.spherical_to_cartesian(sun_altitude, sun_azimuth)
 	_sun_transform = _sun_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
 	
 	fog_material.set_shader_parameter("sun_direction", sun_direction())
@@ -322,7 +319,7 @@ func update_sun_coords() -> void:
 		_sun_light_node.transform = _sun_transform
 	emit_signal("sun_transform_changed", _sun_transform)
 	
-	_set_day_state(altitude)
+	_set_day_state(sun_altitude)
 
 	update_night_intensity()
 	update_sun_light_color()
@@ -345,8 +342,8 @@ func update_sun_coords() -> void:
 @export var moon_color: Color = Color.WHITE: set = set_moon_color
 @export_range(0., .999) var moon_size: float = 0.07: set = set_moon_size
 @export var moon_light_color: Color = Color(0.572549, 0.776471, 0.956863, 1.0): set = set_moon_light_color
-@export_range(-180.0, 180.0, 0.00001) var moon_azimuth: float = 5.0: set = set_moon_azimuth
-@export_range(-180.0, 180.0, 0.00001) var moon_altitude: float = -80.0: set = set_moon_altitude
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_azimuth: float = 5.0: set = set_moon_azimuth
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_altitude: float = -80.0: set = set_moon_altitude
 
 var _moon_transform: Transform3D = Transform3D()
 var moon_light_enabled: bool = true: set = set_moon_light_enabled
@@ -362,14 +359,14 @@ func set_moon_light_enabled(value: bool) -> void:
 
 
 func set_moon_azimuth(value: float) -> void:
-	if value == moon_azimuth:
+	if is_equal_approx(value, moon_azimuth):
 		return
 	moon_azimuth = value
 	update_moon_coords()
 	
 
 func set_moon_altitude(value: float) -> void:
-	if value == moon_altitude:
+	if is_equal_approx(value, moon_altitude):
 		return
 	moon_altitude = value
 	update_moon_coords()
@@ -388,11 +385,8 @@ func update_moon_coords() -> void:
 		return
 	if _moon_light_node:
 		_moon_light_node.visible = true
-
-	var azimuth: float = moon_azimuth * TOD_Math.DEG_TO_RAD
-	var altitude: float = moon_altitude * TOD_Math.DEG_TO_RAD
 	
-	_moon_transform.origin = TOD_Math.spherical_to_cartesian(altitude, azimuth)
+	_moon_transform.origin = TOD_Math.spherical_to_cartesian(moon_altitude, moon_azimuth)
 	_moon_transform = _moon_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
 	
 	var moon_basis: Basis = get_parent().moon.get_global_transform().basis.inverse()

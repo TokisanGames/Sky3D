@@ -1067,7 +1067,10 @@ func update_moon_light_path() -> void:
 
 @export_group("Deep Space")
 var deep_space_euler: Vector3 = Vector3(0, 0, 0.0): set = set_deep_space_euler # DEPRECATED
-@export var starmap_alignment: Vector3 = Vector3(2.6555, -0.23935, 0.4505): set = set_starmap_alignment # Default values work for most star maps in galactic coordinate format.
+@export var starmap_alignment: Vector3 = Vector3(2.68225, -0.25995, 0.39925): set = set_starmap_alignment # Default values work for most star maps in galactic coordinate format.
+@export var starmap_flip_u: bool = false: set = set_starmap_flip_u
+@export var starmap_flip_v: bool = false: set = set_starmap_flip_v
+@export var display_alignment_lasers: bool = false : set = set_display_alignment_lasers
 @export var background_color: Color = Color(0.709804, 0.709804, 0.709804, 0.854902): set = set_background_color
 @export var background_texture: Texture2D = Sky3D.background_texture: set = _set_background_texture
 @export var stars_field_color: Color = Color.WHITE: set = set_stars_field_color
@@ -1075,14 +1078,70 @@ var deep_space_euler: Vector3 = Vector3(0, 0, 0.0): set = set_deep_space_euler #
 @export_range(0.0, 1.0, 0.001) var stars_scintillation: float = 0.75: set = set_stars_scintillation
 @export var stars_scintillation_speed: float = 0.01: set = set_stars_scintillation_speed
 
+const POLARIS_LASER_ALIGNMENT: Vector3 = Vector3(89.4, 48.2, 0.0)
+const VEGA_LASER_ALIGNMENT: Vector3 = Vector3(38.8, -78.3, 0.0)
+const LASER_COLOR: Color = Color(1.0, 0.0, 0.0, 1.0)
 var deep_space_quat: Quaternion = Quaternion.IDENTITY: set = set_deep_space_quat
 var _deep_space_basis: Basis
+var polaris_laser: MeshInstance3D
+var vega_laser: MeshInstance3D
+var laser_material: StandardMaterial3D
 
 
 func set_starmap_alignment(value: Vector3) -> void:
 	starmap_alignment = value
 	if sky_material:
 		sky_material.set_shader_parameter("sky_alignment", value)
+		
+		
+func set_display_alignment_lasers(value: bool) -> void:
+	display_alignment_lasers = value
+	
+	if laser_material == null:
+		laser_material = StandardMaterial3D.new()
+		laser_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		laser_material.vertex_color_use_as_albedo = true
+	
+	if display_alignment_lasers:
+		if not is_instance_valid(polaris_laser):
+			polaris_laser = _create_alignment_laser("__polaris_laser", POLARIS_LASER_ALIGNMENT)
+		if not is_instance_valid(vega_laser):
+			vega_laser = _create_alignment_laser("__vega_laser", VEGA_LASER_ALIGNMENT)
+	else:
+		if is_instance_valid(polaris_laser): polaris_laser.queue_free()
+		if is_instance_valid(vega_laser): vega_laser.queue_free()
+		polaris_laser = null
+		vega_laser = null
+		laser_material = null
+	
+	
+func _create_alignment_laser(name_hint: String, rot_deg: Vector3) -> MeshInstance3D:
+	var immediate_mesh := ImmediateMesh.new()
+	immediate_mesh.surface_begin(Mesh.PRIMITIVE_LINES)
+	immediate_mesh.surface_set_color(LASER_COLOR)
+	immediate_mesh.surface_add_vertex(Vector3(0, 0, 0)) # small offset to avoid z-fighting
+	immediate_mesh.surface_set_color(LASER_COLOR)
+	immediate_mesh.surface_add_vertex(Vector3(0, 0, -1_000_000))
+	immediate_mesh.surface_end()
+
+	var laser_mesh := MeshInstance3D.new()
+	laser_mesh.name = name_hint
+	laser_mesh.mesh = immediate_mesh
+	laser_mesh.material_override = laser_material
+	laser_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	laser_mesh.rotation_degrees = rot_deg
+	add_child(laser_mesh)
+	return laser_mesh
+		
+		
+func set_starmap_flip_u(value: bool) -> void:
+	starmap_flip_u = value
+	sky_material.set_shader_parameter("starmap_flip_u", value)
+
+
+func set_starmap_flip_v(value: bool) -> void:
+	starmap_flip_v = value
+	sky_material.set_shader_parameter("starmap_flip_v", value)
 
 
 func set_deep_space_euler(value: Vector3) -> void:

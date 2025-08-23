@@ -14,6 +14,9 @@ extends WorldEnvironment
 ## Emitted when the environment variable has changed.
 signal environment_changed
 
+# 90 degrees means the sun being exactly on the horizon, 0 degrees is up
+const DAY_NIGHT_TRANSITION_ANGLE: float = deg_to_rad(87.0)
+
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var version: String = "2.1-dev"
 
@@ -222,7 +225,7 @@ func update_day_night(force: bool = false) -> void:
 		return
 
 	# If day transitioning to night
-	if abs(sky.sun_altitude) > 87 and (_is_day or force):
+	if abs(sky.sun_altitude) > DAY_NIGHT_TRANSITION_ANGLE and (_is_day or force):
 		_is_day = false
 		if _contrib_tween:
 			_contrib_tween.kill()
@@ -232,7 +235,7 @@ func update_day_night(force: bool = false) -> void:
 		_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", night_contrib, contribution_tween_time)
 
 	# Else if night transitioning to day
-	elif abs(sky.sun_altitude) <= 87 and (not _is_day or force):
+	elif abs(sky.sun_altitude) <= DAY_NIGHT_TRANSITION_ANGLE and (not _is_day or force):
 		_is_day = true
 		if _contrib_tween:
 			_contrib_tween.kill()

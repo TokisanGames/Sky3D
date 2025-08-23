@@ -1070,7 +1070,7 @@ var deep_space_euler: Vector3 = Vector3(0, 0, 0.0): set = set_deep_space_euler #
 @export var starmap_alignment: Vector3 = Vector3(2.68225, -0.25995, 0.39925): set = set_starmap_alignment # Default values work for most star maps in galactic coordinate format.
 @export var starmap_flip_u: bool = false: set = set_starmap_flip_u
 @export var starmap_flip_v: bool = false: set = set_starmap_flip_v
-@export var display_alignent_lasers: bool = false : set = set_display_alignent_lasers
+@export var display_alignment_lasers: bool = false : set = set_display_alignment_lasers
 @export var background_color: Color = Color(0.709804, 0.709804, 0.709804, 0.854902): set = set_background_color
 @export var background_texture: Texture2D = Sky3D.background_texture: set = _set_background_texture
 @export var stars_field_color: Color = Color.WHITE: set = set_stars_field_color
@@ -1094,15 +1094,15 @@ func set_starmap_alignment(value: Vector3) -> void:
 		sky_material.set_shader_parameter("sky_alignment", value)
 		
 		
-func set_display_alignent_lasers(value: bool) -> void:
-	display_alignent_lasers = value
+func set_display_alignment_lasers(value: bool) -> void:
+	display_alignment_lasers = value
 	
 	if laser_material == null:
 		laser_material = StandardMaterial3D.new()
 		laser_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		laser_material.vertex_color_use_as_albedo = true
 	
-	if display_alignent_lasers:
+	if display_alignment_lasers:
 		if not is_instance_valid(polaris_laser):
 			polaris_laser = _create_alignment_laser("__polaris_laser", POLARIS_LASER_ALIGNMENT)
 		if not is_instance_valid(vega_laser):

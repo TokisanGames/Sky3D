@@ -171,11 +171,11 @@ mat3 rotationMatrix(vec3 r) {
 }
 
 vec2 equirectUV(vec3 norm) {
-	float flipu = starmap_flip_u ? 1.0 : -1.0;
-	float flipv = starmap_flip_v ? 1.0 : -1.0;
-	float u = ((atan(norm.y, norm.x) + PI) / TAU); // 0 to 1 horizontally
-	float v = (acos(norm.z) / PI); // 0 (north pole) to 1 (south pole)
-	return vec2(u, -v);
+	float flipu = starmap_flip_u ? -1.0 : 1.0;
+	float flipv = starmap_flip_v ? -1.0 : 1.0;
+	float u = flipu * ((atan(norm.y, norm.x) + PI) / TAU); // 0 to 1 horizontally
+	float v = flipv * (acos(norm.z) / -PI); // 0 (north pole) to 1 (south pole)
+	return vec2(u, v);
 }
 
 vec3 get_moon_texture_equirectUV(vec3 dir) {

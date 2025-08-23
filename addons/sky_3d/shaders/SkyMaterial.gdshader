@@ -171,7 +171,7 @@ mat3 rotationMatrix(vec3 r) {
 vec2 equirectUV(vec3 norm) {
 	float u = (atan(norm.y, norm.x) + PI) / TAU; // 0 to 1 horizontally
 	float v = acos(norm.z) / PI; // 0 (north pole) to 1 (south pole)
-	return vec2(u, v);
+	return vec2(u, -v);
 }
 
 vec3 get_moon_texture_equirectUV(vec3 dir) {

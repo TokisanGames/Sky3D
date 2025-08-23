@@ -7,8 +7,10 @@ render_mode use_debanding;
 uniform bool sky_visible = true;
 uniform bool show_azimuthal_grid = false;
 uniform vec4 azimuthal_grid_color = vec4(.871, .722, .529, 1.);
+uniform float azimuthal_grid_rotation_offset = 0.03;
 uniform bool show_equatorial_grid = false;
 uniform vec4 equatorial_grid_color = vec4(0., .75, 1., 1.);
+uniform float equatorial_grid_rotation_offset = 0.03;
 
 // Color correction
 group_uniforms General;
@@ -64,7 +66,10 @@ uniform vec4 background_color: source_color = vec4(0.71, 0.71, 0.71, 0.855);
 group_uniforms Starfield;
 uniform vec4 stars_field_color: source_color = vec4(1.0);
 uniform sampler2D stars_field_texture: source_color;
-uniform vec3 sky_alignment = vec3(2.6555, -0.23935, 0.4505);
+uniform bool starmap_flip_u = false;
+uniform bool starmap_flip_v = false;
+uniform vec3 sky_alignment = vec3(2.68288, -0.25891, 0.40101);
+uniform float sky_rotation_offset = 9.38899;
 uniform float sky_rotation = 0.0; // For simulating Earth rotation.
 uniform float sky_tilt = 0.0; // For tilting the sky according to observer latitude in radians. (90° - latitude)
 uniform float stars_scintillation = 0.75;
@@ -169,8 +174,10 @@ mat3 rotationMatrix(vec3 r) {
 }
 
 vec2 equirectUV(vec3 norm) {
-	float u = (atan(norm.y, norm.x) + PI) / TAU; // 0 to 1 horizontally
-	float v = acos(norm.z) / PI; // 0 (north pole) to 1 (south pole)
+	float flipu = starmap_flip_u ? -1.0 : 1.0;
+	float flipv = starmap_flip_v ? -1.0 : 1.0;
+	float u = flipu * ((atan(norm.y, norm.x) + PI) / TAU); // 0 to 1 horizontally
+	float v = flipv * (acos(norm.z) / -PI); // 0 (north pole) to 1 (south pole)
 	return vec2(u, v);
 }
 
@@ -180,8 +187,8 @@ vec3 get_moon_texture_equirectUV(vec3 dir) {
 	dir.z = -dir.z;
 	float flipu = moon_texture_flip_u ? 1.0 : -1.0;
 	float flipv = moon_texture_flip_v ? 1.0 : -1.0;
-	float u = 0.5 + flipu * atan(dir.z, dir.x) / (2.0 * 3.141592653589793); // Longitude
-	float v = 0.5 + flipv * asin(dir.y) / 3.141592653589793; // Latitude
+	float u = 0.5 + flipu * atan(dir.z, dir.x) / (2.0 * PI); // Longitude
+	float v = 0.5 + flipv * asin(dir.y) / PI; // Latitude
 	return texture(moon_texture, vec2(u, v)).rgb;
 }
 
@@ -425,7 +432,7 @@ vec3 render_sky(vec3 worldPos, vec3 cloudsPos, vec3 sunPosition, vec3 moonPositi
 	mat3 tilt = rotationMatrix(vec3(sky_tilt, 0.0, 0.0));
 
 	// Rotation around Y-axis. For simulating Earth's rotation.
-	mat3 rotation = rotationMatrix(vec3(0.0, sky_rotation, 0.0));
+	mat3 rotation = rotationMatrix(vec3(0.0, sky_rotation + sky_rotation_offset, 0.0));
 
 	// Initial XYZ rotation for alignment.
 	mat3 alignment_xyz = rotationMatrix(sky_alignment);
@@ -526,7 +533,7 @@ void draw_grid(vec3 dir, vec3 pole_dir, float rotation_angle, vec4 line_color, f
 	// Add poles
 	float pole_thickness = circle_thickness;
 	float north_pole = 1.0 - smoothstep(0.0, pole_thickness, theta);
-	float south_pole = 1.0 - smoothstep(0.0, pole_thickness, abs(theta - 3.14159));
+	float south_pole = 1.0 - smoothstep(0.0, pole_thickness, abs(theta - PI));
 	circle_line = max(circle_line, max(north_pole, south_pole));
 
 	// Darken Lat at poles
@@ -563,14 +570,13 @@ void sky() {
 		float grid_thickness = 0.0002;
 		float grid_spacing = 0.261799; // 15 degrees
 		vec3 zenith_dir = vec3(0.0, 1.0, 0.0); // Y-axis aligned azimuthal
-		vec3 polaris_dir = normalize(vec3(0.001, 0.0, 1.0)); // TODO Update with position of polaris
-		float sidereal_rate = -TAU / 24.0; // Sidereal rotation: ~15 degrees/hour (2π/24 radians/hour)
-		float rotation_angle = .05 * TIME * sidereal_rate; // TOOD update rotation w/ sky rotation
+		vec3 north_celestial_pole = rotationMatrix(vec3(sky_tilt, 0.0, 0.0)) * zenith_dir;
+		float rotation_angle = sky_rotation + sky_rotation_offset;
 		if (show_azimuthal_grid) {
-			draw_grid(EYEDIR, zenith_dir, 0.0, azimuthal_grid_color, grid_spacing, grid_thickness, col);
+			draw_grid(EYEDIR, zenith_dir, azimuthal_grid_rotation_offset, azimuthal_grid_color, grid_spacing, grid_thickness, col);
 		}
 		if (show_equatorial_grid) {
-			draw_grid(EYEDIR, polaris_dir, rotation_angle, equatorial_grid_color, grid_spacing, grid_thickness, col);
+			draw_grid(EYEDIR, north_celestial_pole, rotation_angle + equatorial_grid_rotation_offset, equatorial_grid_color, grid_spacing, grid_thickness, col);
 		}
 	}
 

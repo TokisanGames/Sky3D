@@ -214,14 +214,16 @@ func update_horizon_level() -> void:
 	
 
 #####################
-## Sun Coords
+## Overlays
 #####################
 
 @export_group("Overlays")
 @export var show_azimuthal_grid: bool = false: set = set_azimuthal_grid
 @export var azimuthal_grid_color := Color.BURLYWOOD: set = set_azimuthal_color
+@export_range(0.0, 1.0, 0.001) var azimuthal_grid_rotation_offset = 0.03: set = set_azimuthal_grid_rotation_offset
 @export var show_equatorial_grid: bool = false: set = set_equatorial_grid
 @export var equatorial_grid_color := Color(.0, .75, 1.): set = set_equatorial_color
+@export_range(0.0, 1.0, 0.001) var equatorial_grid_rotation_offset = 0.03: set = set_equatorial_grid_rotation_offset
 
 func set_azimuthal_grid(value: bool) -> void:
 	if !is_scene_built:
@@ -237,6 +239,12 @@ func set_azimuthal_color(value: Color) -> void:
 	sky_material.set_shader_parameter("azimuthal_grid_color", value)
 	
 
+func set_azimuthal_grid_rotation_offset(value: float) -> void:
+	azimuthal_grid_rotation_offset = value
+	if sky_material:
+		sky_material.set_shader_parameter("azimuthal_grid_rotation_offset", value)
+	
+
 func set_equatorial_grid(value: bool) -> void:
 	if !is_scene_built:
 		return
@@ -249,6 +257,12 @@ func set_equatorial_color(value: Color) -> void:
 		return
 	equatorial_grid_color = value
 	sky_material.set_shader_parameter("equatorial_grid_color", value)
+	
+	
+func set_equatorial_grid_rotation_offset(value: float) -> void:
+	equatorial_grid_rotation_offset = value
+	if sky_material:
+		sky_material.set_shader_parameter("equatorial_grid_rotation_offset", value)
 
 		
 #####################
@@ -1048,22 +1062,114 @@ func update_moon_light_path() -> void:
 
 @export_group("Deep Space")
 var deep_space_euler: Vector3 = Vector3(0, 0, 0.0): set = set_deep_space_euler # DEPRECATED
-@export var starmap_alignment: Vector3 = Vector3(2.6555, -0.23935, 0.4505): set = set_starmap_alignment # Default values work for most star maps in galactic coordinate format.
+## For aligning the star map texture map to known reference points. See [annotation Skydome.show_alignment_lasers].
+@export var starmap_alignment: Vector3 = Vector3(2.68288, -0.25891, 0.40101): set = set_starmap_alignment
+## Offset value for realigning the sky's rotation if using a datetime too many years off from the "epoch" of 20 March 2025.[br][br]
+## [b]Temporary; will eventually be removed in a future update.[/b]
+@export var sky_rotation_offset: float = 9.38899: set = set_sky_rotation_offset
+## Flips the star map texture's U. Useful if the imported texture is backwards or upside down.
+@export var starmap_flip_u: bool = false: set = set_starmap_flip_u
+## Flips the star map texture's V. Useful if the imported texture is backwards or upside down.
+@export var starmap_flip_v: bool = false: set = set_starmap_flip_v
+## Displays two red lines in 3D space aligned with Polaris and Vega if standing at the North Pole on the Vernal Equinox, 20 March 2025 at midnight.[br][br]
+## [b][u]Usage[/u][/b][br]
+## 1. Set the date and time in [TimeOfDay] to 20 March 2025 at midnight (0 hours), and the UTC to zero (0).[br]
+## 2. Set the location in TimeOfDay to 90° North Latitude and 0° Longitude.[br]
+## 3. In Skydome, check [param show_alignment_lasers]. Two red lines will appear in 3D space to indicate the location of Polaris (North) and Vega (East).[br]
+## 4. Adjust [param starmap_alignment] to align the correct stars to their respective lasers.[br][br]
+## [b][u]Tips[/u][/b][br]
+## · Use a photo editor to mark known stars on the texture for easy identification in the editor.[br]
+## · On the viewport toolbar, set View / Settings / Perspective VFOV to a low value (5-15) to zoom in on the sky.[br]
+## · Use View / 2 Viewports to see both lasers simultaneously.[br]
+## · Position the editor cameras near the origin point as perspective may throw off adjustments.[br]
+## · Not all texture maps are created equal. Distortions may result in alignments being slightly off no matter what.
+@export var show_alignment_lasers: bool = false : set = set_show_alignment_lasers
 @export var background_color: Color = Color(0.709804, 0.709804, 0.709804, 0.854902): set = set_background_color
 @export var background_texture: Texture2D = Sky3D.background_texture: set = _set_background_texture
 @export var stars_field_color: Color = Color.WHITE: set = set_stars_field_color
 @export var stars_field_texture: Texture2D = Sky3D.stars_field_texture: set = _set_stars_field_texture
+## Controls the intensity of the simulated star "twinkling".
 @export_range(0.0, 1.0, 0.001) var stars_scintillation: float = 0.75: set = set_stars_scintillation
-@export var stars_scintillation_speed: float = 0.01: set = set_stars_scintillation_speed
+## Adjusts the speed at which the texture used for star "twinkling" moves across the star map textures.
+@export var stars_scintillation_speed: float = 0.01: set = set_stars_scintillation_speed ##
 
+# Astronomical horizontal coordinates are measured starting from the north with positive going clockwise.
+# This is counter to traditional math where "azimuth" would increase going counter-clockwise.
+# When inputting a star's known azimuth, it should be subtracted from 360 to map it to Godot's coordinates
+# and avoid negative angles. 
+const POLARIS_LASER_ALIGNMENT: Vector3 = Vector3(89.3707, 48.2213, 0.0) # Real-world azimuth is 311.7787.
+const VEGA_LASER_ALIGNMENT: Vector3 = Vector3(38.8, 281.666, 0.0) # Real-world azimuth is 78.334.
+const LASER_COLOR: Color = Color(1.0, 0.0, 0.0, 1.0)
 var deep_space_quat: Quaternion = Quaternion.IDENTITY: set = set_deep_space_quat
 var _deep_space_basis: Basis
+var _polaris_laser: MeshInstance3D
+var _vega_laser: MeshInstance3D
+var _laser_material: StandardMaterial3D
 
 
 func set_starmap_alignment(value: Vector3) -> void:
 	starmap_alignment = value
 	if sky_material:
 		sky_material.set_shader_parameter("sky_alignment", value)
+		
+		
+func set_sky_rotation_offset(value: float) -> void:
+	sky_rotation_offset = value
+	if sky_material:
+		sky_material.set_shader_parameter("sky_rotation_offset", value)
+
+
+func set_show_alignment_lasers(value: bool) -> void:
+	show_alignment_lasers = value
+	
+	if _laser_material == null:
+		_laser_material = StandardMaterial3D.new()
+		_laser_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_laser_material.vertex_color_use_as_albedo = true
+	
+	if show_alignment_lasers:
+		if not is_instance_valid(_polaris_laser):
+			_polaris_laser = _create_alignment_laser("__polaris_laser", POLARIS_LASER_ALIGNMENT)
+			add_child(_polaris_laser, true)
+		if not is_instance_valid(_vega_laser):
+			_vega_laser = _create_alignment_laser("__vega_laser", VEGA_LASER_ALIGNMENT)
+			add_child(_vega_laser, true)
+	else:
+		if is_instance_valid(_polaris_laser):
+			_polaris_laser.queue_free()
+		if is_instance_valid(_vega_laser):
+			_vega_laser.queue_free()
+		_polaris_laser = null
+		_vega_laser = null
+		_laser_material = null
+
+	
+func _create_alignment_laser(name_hint: String, rot_deg: Vector3) -> MeshInstance3D:
+	var immediate_mesh := ImmediateMesh.new()
+	immediate_mesh.surface_begin(Mesh.PRIMITIVE_LINES)
+	immediate_mesh.surface_set_color(LASER_COLOR)
+	immediate_mesh.surface_add_vertex(Vector3(0, 0, 0))
+	immediate_mesh.surface_set_color(LASER_COLOR)
+	immediate_mesh.surface_add_vertex(Vector3(0, 0, -1_000_000))
+	immediate_mesh.surface_end()
+
+	var laser_mesh := MeshInstance3D.new()
+	laser_mesh.name = name_hint
+	laser_mesh.mesh = immediate_mesh
+	laser_mesh.material_override = _laser_material
+	laser_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	laser_mesh.rotation_degrees = rot_deg
+	return laser_mesh
+
+
+func set_starmap_flip_u(value: bool) -> void:
+	starmap_flip_u = value
+	sky_material.set_shader_parameter("starmap_flip_u", value)
+
+
+func set_starmap_flip_v(value: bool) -> void:
+	starmap_flip_v = value
+	sky_material.set_shader_parameter("starmap_flip_v", value)
 
 
 func set_deep_space_euler(value: Vector3) -> void:

@@ -64,6 +64,8 @@ uniform vec4 background_color: source_color = vec4(0.71, 0.71, 0.71, 0.855);
 group_uniforms Starfield;
 uniform vec4 stars_field_color: source_color = vec4(1.0);
 uniform sampler2D stars_field_texture: source_color;
+uniform bool starmap_flip_u = false;
+uniform bool starmap_flip_v = false;
 uniform vec3 sky_alignment = vec3(2.6555, -0.23935, 0.4505);
 uniform float sky_rotation = 0.0; // For simulating Earth rotation.
 uniform float sky_tilt = 0.0; // For tilting the sky according to observer latitude in radians. (90° - latitude)
@@ -169,9 +171,11 @@ mat3 rotationMatrix(vec3 r) {
 }
 
 vec2 equirectUV(vec3 norm) {
-	float u = (atan(norm.y, norm.x) + PI) / TAU; // 0 to 1 horizontally
-	float v = acos(norm.z) / PI; // 0 (north pole) to 1 (south pole)
-	return vec2(u, -v);
+	float flipu = starmap_flip_u ? 1.0 : -1.0;
+	float flipv = starmap_flip_v ? 1.0 : -1.0;
+	float u = flipu * ((atan(norm.y, norm.x) + PI) / TAU); // 0 to 1 horizontally
+	float v = flipv * (acos(norm.z) / -PI); // 0 (north pole) to 1 (south pole)
+	return vec2(u, v);
 }
 
 vec3 get_moon_texture_equirectUV(vec3 dir) {

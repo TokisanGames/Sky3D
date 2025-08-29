@@ -5,18 +5,15 @@
 class_name Skydome
 extends Node
 
-signal sun_transform_changed(value)
-signal moon_transform_changed(value)
 signal day_night_changed(value)
-signal lights_changed
 
 var is_scene_built: bool = false
 var fog_mesh: MeshInstance3D
 var sky_material: ShaderMaterial
-var moon_material: Material
 var clouds_cumulus_material: Material
 var fog_material: Material
 
+const DAY_NIGHT_TRANSITION_ANGLE : float = deg_to_rad(90)  # Horizon
 
 func _ready() -> void:
 	build_scene()
@@ -296,10 +293,6 @@ func set_sun_altitude(value: float) -> void:
 	update_sun_coords()
 
 
-func get_sun_transform() -> Transform3D:
-	return _sun_transform
-
-
 func sun_direction() -> Vector3:
 	return _sun_transform.origin
 
@@ -317,7 +310,6 @@ func update_sun_coords() -> void:
 	fog_material.set_shader_parameter("sun_direction", sun_direction())
 	if _sun_light_node:
 		_sun_light_node.transform = _sun_transform
-	emit_signal("sun_transform_changed", _sun_transform)
 	
 	_set_day_state(sun_altitude)
 
@@ -370,10 +362,6 @@ func set_moon_altitude(value: float) -> void:
 		return
 	moon_altitude = value
 	update_moon_coords()
-	
-
-func get_moon_transform() -> Transform3D:
-	return _moon_transform
 
 
 func moon_direction() -> Vector3:
@@ -394,7 +382,6 @@ func update_moon_coords() -> void:
 	fog_material.set_shader_parameter("moon_direction", moon_direction())
 	if _moon_light_node:
 		_moon_light_node.transform = _moon_transform
-	emit_signal("moon_transform_changed", _moon_transform)
 	
 	_moon_light_altitude_mult = clampf(moon_direction().y, 0., 1.)
 	
@@ -1589,7 +1576,7 @@ func is_day() -> bool:
 	return _day == true
 
 
-func _set_day_state(v: float, threshold: float = 1.80) -> void:
+func _set_day_state(v: float, threshold: float = DAY_NIGHT_TRANSITION_ANGLE) -> void:
 	# Signal when day has changed to night and vice versa.
 	if _day == true and abs(v) > threshold:
 		_day = false

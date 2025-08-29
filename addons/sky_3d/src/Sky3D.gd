@@ -14,9 +14,6 @@ extends WorldEnvironment
 ## Emitted when the environment variable has changed.
 signal environment_changed
 
-# 90 degrees means the sun being exactly on the horizon, 0 degrees is up
-const DAY_NIGHT_TRANSITION_ANGLE: float = deg_to_rad(87.0)
-
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var version: String = "2.1-dev"
 
@@ -187,18 +184,14 @@ var game_time: String = "" :
 		return tod.update_interval if tod else update_interval
 
 
-## Tracks if the sun is above the horizon.
-var _is_day: bool = true
-
-
 ## Returns true if the sun is above the horizon.
 func is_day() -> bool:
-	return _is_day
+	return sky.is_day()
 
-	
+
 ## Returns true if the sun is below the horizon.
 func is_night() -> bool:
-	return not _is_day
+	return not sky.is_day()
 
 
 ## Pauses time calculation. Alias for TimeOfDay.pause().
@@ -213,35 +206,22 @@ func resume() -> void:
 		tod.resume()
 
 
-func _on_timeofday_updated(time: float) -> void:
-	update_day_night()
-
-
 var _contrib_tween: Tween
 
-## Recalculates if it's currently day or night. Adjusts night ambient light if changing state or forced.
-func update_day_night(force: bool = false) -> void:
+func update_ambient_contribution() -> void:
 	if not (sky and environment and is_inside_tree()):
 		return
 
-	# If day transitioning to night
-	if abs(sky.sun_altitude) > DAY_NIGHT_TRANSITION_ANGLE and (_is_day or force):
-		_is_day = false
-		if _contrib_tween:
-			_contrib_tween.kill()
-		_contrib_tween = get_tree().create_tween()
-		_contrib_tween.set_parallel(true)
+	if _contrib_tween:
+		_contrib_tween.kill()
+	_contrib_tween = get_tree().create_tween()
+	_contrib_tween.set_parallel(true)
+	
+	if is_day():
+		_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", sky_contribution, contribution_tween_time)
+	else:
 		var night_contrib: float = minf(night_sky_contribution, sky_contribution) if night_ambient_boost else sky_contribution
 		_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", night_contrib, contribution_tween_time)
-
-	# Else if night transitioning to day
-	elif abs(sky.sun_altitude) <= DAY_NIGHT_TRANSITION_ANGLE and (not _is_day or force):
-		_is_day = true
-		if _contrib_tween:
-			_contrib_tween.kill()
-		_contrib_tween = get_tree().create_tween()
-		_contrib_tween.set_parallel(true)
-		_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", sky_contribution, contribution_tween_time)
 
 
 #####################
@@ -318,7 +298,7 @@ func update_day_night(force: bool = false) -> void:
 		if environment:
 			sky_contribution = value
 			environment.ambient_light_sky_contribution = value
-			update_day_night(true)
+			update_ambient_contribution()
 
 
 ## Strength of ambient light. Works when there are no Reflection Probes or GI, and
@@ -326,7 +306,7 @@ func update_day_night(force: bool = false) -> void:
 @export_range(0, 16, 0.005) var ambient_energy: float = 1.0 :
 	set(value):
 		environment.ambient_light_energy = value
-		update_day_night(true)
+		update_ambient_contribution()
 	get:
 		return environment.ambient_light_energy if environment else ambient_energy
 
@@ -360,7 +340,7 @@ func update_day_night(force: bool = false) -> void:
 @export var night_ambient_boost: bool = true :
 	set(value):
 		night_ambient_boost = value
-		update_day_night(true)
+		update_ambient_contribution()
 
 
 ## Sets Environment.ambient_light_sky_contribution at night if night_ambient_boost is enabled.
@@ -369,7 +349,7 @@ func update_day_night(force: bool = false) -> void:
 	set(value):
 		night_sky_contribution = value
 		if night_ambient_boost:
-			update_day_night(true)
+			update_ambient_contribution()
 
 
 ## Transition time for changing sky contribution when shifting between day and night.
@@ -531,12 +511,12 @@ func _initialize() -> void:
 		add_child(tod, true)
 		tod.owner = get_tree().edited_scene_root
 		tod.dome_path = "../Skydome"
-	if tod and not tod.time_changed.is_connected(_on_timeofday_updated):
-		tod.time_changed.connect(_on_timeofday_updated)
+	if sky and not sky.day_night_changed.is_connected(update_ambient_contribution):
+		sky.day_night_changed.connect(update_ambient_contribution)
 
 
 func _enter_tree() -> void:
-	update_day_night(true)
+	update_ambient_contribution()
 
 
 func _set(property: StringName, value: Variant) -> bool:

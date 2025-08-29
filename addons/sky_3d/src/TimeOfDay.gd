@@ -198,14 +198,6 @@ func time_cycle_duration() -> float:
 	return total_cycle_in_minutes * 60.0
 
 
-func is_begin_of_time() -> bool:
-	return year == 1 && month == 1 && day == 1
-
-
-func is_end_of_time() -> bool:
-	return year == 9999 && month == 12 && day == 31
-
-
 #####################
 ## Planetary
 #####################

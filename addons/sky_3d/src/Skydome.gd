@@ -7,13 +7,13 @@ extends Node
 
 signal day_night_changed(value)
 
+const DAY_NIGHT_TRANSITION_ANGLE : float = deg_to_rad(90)  # Horizon
+
 var is_scene_built: bool = false
 var fog_mesh: MeshInstance3D
 var sky_material: ShaderMaterial
 var clouds_cumulus_material: Material
 var fog_material: Material
-
-const DAY_NIGHT_TRANSITION_ANGLE : float = deg_to_rad(90)  # Horizon
 
 func _ready() -> void:
 	build_scene()
@@ -263,8 +263,8 @@ func set_equatorial_color(value: Color) -> void:
 @export_range(0.0, 0.5, 0.001) var sun_disk_size: float = 0.02: set = set_sun_disk_size
 @export var sun_light_color: Color = Color.WHITE : set = set_sun_light_color 
 @export var sun_horizon_light_color: Color = Color(.98, 0.523, 0.294, 1.0): set = set_sun_horizon_light_color
-@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_azimuth: float = 0.0: set = set_sun_azimuth
-@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_altitude: float = -0.4779: set = set_sun_altitude
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_azimuth: float = deg_to_rad(0.): set = set_sun_azimuth
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_altitude: float = deg_to_rad(-27.387): set = set_sun_altitude
 
 var _sun_transform := Transform3D()
 var sun_light_enabled: bool = true: set = set_sun_light_enabled
@@ -334,8 +334,8 @@ func update_sun_coords() -> void:
 @export var moon_color: Color = Color.WHITE: set = set_moon_color
 @export_range(0., .999) var moon_size: float = 0.07: set = set_moon_size
 @export var moon_light_color: Color = Color(0.572549, 0.776471, 0.956863, 1.0): set = set_moon_light_color
-@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_azimuth: float = 5.0: set = set_moon_azimuth
-@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_altitude: float = -80.0: set = set_moon_altitude
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_azimuth: float = deg_to_rad(5.): set = set_moon_azimuth
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_altitude: float = deg_to_rad(-80.): set = set_moon_altitude
 
 var _moon_transform: Transform3D = Transform3D()
 var moon_light_enabled: bool = true: set = set_moon_light_enabled

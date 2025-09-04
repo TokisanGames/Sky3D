@@ -19,7 +19,6 @@ var version: String = "2.1-dev"
 
 const sky_shader: Shader = preload("res://addons/sky_3d/shaders/SkyMaterial.gdshader")
 const fog_shader: Shader = preload("res://addons/sky_3d/shaders/AtmFog.gdshader")
-
 const moon_texture: Texture2D = preload("res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png")
 const background_texture: Texture2D = preload("res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg")
 const stars_field_texture: Texture2D = preload("res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg")
@@ -176,7 +175,7 @@ var game_time: String = "" :
 ## the smoother the animation. Set to [param 0.016] for 60fps, for example.[br][br]
 ## [b]Note:[/b] Setting this value too small may cause unwanted behavior. See [member Timer.wait_time].
 ## Alias for TimeOfDay.update_interval.
-@export_range(0.016, 10.0) var update_interval: float = 0.1 :
+@export_range(0.016, 10.0) var update_interval: float = 0.016 :
 	set(value):
 		if tod:
 			tod.update_interval = value
@@ -186,12 +185,12 @@ var game_time: String = "" :
 
 ## Returns true if the sun is above the horizon.
 func is_day() -> bool:
-	return sky.is_day()
+	return sky and sky.is_day()
 
 
 ## Returns true if the sun is below the horizon.
 func is_night() -> bool:
-	return not sky.is_day()
+	return sky and not sky.is_day()
 
 
 ## Pauses time calculation. Alias for TimeOfDay.pause().
@@ -208,7 +207,8 @@ func resume() -> void:
 
 var _contrib_tween: Tween
 
-func update_ambient_contribution() -> void:
+## Adjusts sky contribution if transitioning to day or night.
+func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 	if not (sky and environment and is_inside_tree()):
 		return
 
@@ -217,7 +217,7 @@ func update_ambient_contribution() -> void:
 	_contrib_tween = get_tree().create_tween()
 	_contrib_tween.set_parallel(true)
 	
-	if is_day():
+	if daytime:
 		_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", sky_contribution, contribution_tween_time)
 	else:
 		var night_contrib: float = minf(night_sky_contribution, sky_contribution) if night_ambient_boost else sky_contribution
@@ -298,7 +298,7 @@ func update_ambient_contribution() -> void:
 		if environment:
 			sky_contribution = value
 			environment.ambient_light_sky_contribution = value
-			update_ambient_contribution()
+			_start_sky_contrib_tween()
 
 
 ## Strength of ambient light. Works when there are no Reflection Probes or GI, and
@@ -306,7 +306,7 @@ func update_ambient_contribution() -> void:
 @export_range(0, 16, 0.005) var ambient_energy: float = 1.0 :
 	set(value):
 		environment.ambient_light_energy = value
-		update_ambient_contribution()
+		_start_sky_contrib_tween()
 	get:
 		return environment.ambient_light_energy if environment else ambient_energy
 
@@ -340,7 +340,7 @@ func update_ambient_contribution() -> void:
 @export var night_ambient_boost: bool = true :
 	set(value):
 		night_ambient_boost = value
-		update_ambient_contribution()
+		_start_sky_contrib_tween()
 
 
 ## Sets Environment.ambient_light_sky_contribution at night if night_ambient_boost is enabled.
@@ -349,7 +349,7 @@ func update_ambient_contribution() -> void:
 	set(value):
 		night_sky_contribution = value
 		if night_ambient_boost:
-			update_ambient_contribution()
+			_start_sky_contrib_tween()
 
 
 ## Transition time for changing sky contribution when shifting between day and night.
@@ -511,12 +511,12 @@ func _initialize() -> void:
 		add_child(tod, true)
 		tod.owner = get_tree().edited_scene_root
 		tod.dome_path = "../Skydome"
-	if sky and not sky.day_night_changed.is_connected(update_ambient_contribution):
-		sky.day_night_changed.connect(update_ambient_contribution)
+	if sky and not sky.day_night_changed.is_connected(_start_sky_contrib_tween):
+		sky.day_night_changed.connect(_start_sky_contrib_tween)
 
 
 func _enter_tree() -> void:
-	update_ambient_contribution()
+	_start_sky_contrib_tween()
 
 
 func _set(property: StringName, value: Variant) -> bool:

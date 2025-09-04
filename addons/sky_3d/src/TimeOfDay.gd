@@ -205,8 +205,8 @@ func time_cycle_duration() -> float:
 @export_group("Planetary And Location")
 enum CelestialMode { SIMPLE, REALISTIC }
 @export var celestials_calculations: CelestialMode = CelestialMode.REALISTIC: set = set_celestials_calculations
-@export_range(-90, 90, 0.00001, "radians_as_degrees") var latitude: float = 16.0: set = set_latitude
-@export_range(-180, 180, 0.00001, "radians_as_degrees") var longitude: float = 108.0: set = set_longitude
+@export_range(-90, 90, 0.00001, "radians_as_degrees") var latitude: float = deg_to_rad(16.): set = set_latitude
+@export_range(-180, 180, 0.00001, "radians_as_degrees") var longitude: float = deg_to_rad(108.): set = set_longitude
 @export_range(-12,14,.25) var utc: float = 7.0: set = set_utc
 @export var compute_moon_coords: bool = true: set = set_compute_moon_coords
 @export var compute_deep_space_coords: bool = true: set = set_compute_deep_space_coords

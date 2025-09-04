@@ -3,9 +3,9 @@
 
 ## Sky3D is an Atmosphereic Day/Night Cycle for Godot 4.
 ##
-## It manages time, moving the sun, moon, and stars, and consolidates environmental lighting controls.
+## This plugin manages time, moving the sun, moon, and stars, and consolidates environmental lighting controls.
 ## To use it, remove any WorldEnvironment node from you scene, then add a new Sky3D node.
-## Explore and configure the settings in the Sky3D, SunLight, MoonLight, TimeOfDay, and Skydome nodes.
+## Explore and configure the settings in the Sky3D, SunLight, MoonLight, [SkyDome], and [TimeOfDay] nodes.
 
 @tool
 class_name Sky3D
@@ -14,18 +14,10 @@ extends WorldEnvironment
 ## Emitted when the environment variable has changed.
 signal environment_changed
 
+const SKY_SHADER: String = "res://addons/sky_3d/shaders/SkyMaterial.gdshader"
+
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var version: String = "2.1-dev"
-
-const sky_shader: Shader = preload("res://addons/sky_3d/shaders/SkyMaterial.gdshader")
-const fog_shader: Shader = preload("res://addons/sky_3d/shaders/AtmFog.gdshader")
-const moon_texture: Texture2D = preload("res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png")
-const background_texture: Texture2D = preload("res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg")
-const stars_field_texture: Texture2D = preload("res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg")
-const sun_moon_curve_fade: Curve = preload("res://addons/sky_3d/assets/resources/SunMoonLightFade.tres")
-const stars_field_noise: Texture2D = preload("res://addons/sky_3d/assets/textures/noise.jpg")
-const clouds_texture: Texture2D = preload("res://addons/sky_3d/assets/resources/SNoise.tres")
-const clouds_cumulus_texture: Texture2D = preload("res://addons/sky_3d/assets/textures/noiseClouds.png")
 
 ## The Sun DirectionalLight.
 var sun: DirectionalLight3D
@@ -33,8 +25,8 @@ var sun: DirectionalLight3D
 var moon: DirectionalLight3D
 ## The TimeOfDay node.
 var tod: TimeOfDay
-## The Skydome node.
-var sky: Skydome
+## The SkyDome node.
+var sky: SkyDome
 ## The Sky shader.
 var sky_material: ShaderMaterial
 
@@ -63,8 +55,8 @@ var sky_material: ShaderMaterial
 		sky_enabled = value
 		if sky and sky_material:
 			sky_material.set_shader_parameter("sky_visible", value)
-			sky.clouds_cumulus_visible = clouds_enabled and value
-			sky.clouds_visible = clouds_enabled and value
+			sky.cumulus_visible = clouds_enabled and value
+			sky.cirrus_visible = clouds_enabled and value
 
 
 ## Enables both 2D and cumulus cloud layers.
@@ -72,8 +64,8 @@ var sky_material: ShaderMaterial
 	set(value):
 		clouds_enabled = value
 		if sky:
-			sky.clouds_cumulus_visible = value
-			sky.clouds_visible = value
+			sky.cumulus_visible = value
+			sky.cirrus_visible = value
 
 
 ## Enables the Sun and Moon DirectionalLights.
@@ -149,13 +141,13 @@ var game_time: String = "" :
 
 
 ## The current in-game time in hours from 0.0 to 23.99. Smaller or larger values than the range will wrap.
-## Alias for TimeOfDay.total_hours.
+## Alias for TimeOfDay.current_time.
 @export_range(0.0, 23.99, 0.01) var current_time: float = 8.0 :
 	set(value):
 		if tod:
-			tod.total_hours = value
+			tod.current_time = value
 	get:
-		return tod.total_hours if tod else current_time
+		return tod.current_time if tod else current_time
 
 
 ## The length of a full in-game day in real-world minutes.[br]
@@ -207,7 +199,7 @@ func resume() -> void:
 
 var _contrib_tween: Tween
 
-## Adjusts sky contribution if transitioning to day or night.
+# Adjusts sky contribution if transitioning to day or night.
 func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 	if not (sky and environment and is_inside_tree()):
 		return
@@ -253,7 +245,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return environment.tonemap_exposure if environment else tonemap_exposure
 
 
-## Light energy coming from the sky shader. Alias for Skydome.exposure.
+## Light energy coming from the sky shader. Alias for SkyDome.exposure.
 @export_range(0, 16, 0.005) var skydome_energy: float = 1.0 :
 	set(value):
 		if sky:
@@ -262,17 +254,17 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return sky.exposure if sky else skydome_energy
 
 
-## Brightness of and light energy coming from the clouds. Alias for Skydome.clouds_cumulus_intensity.
+## Brightness of and light energy coming from the clouds. Alias for SkyDome.cumulus_intensity.
 @export_range(0, 16, 0.005) var cloud_intensity: float = 0.6 :
 	set(value):
 		if sky:
-			sky.clouds_cumulus_intensity = value
+			sky.cumulus_intensity = value
 	get:
-		return sky.clouds_cumulus_intensity if sky else cloud_intensity
+		return sky.cumulus_intensity if sky else cloud_intensity
 
 
 ## Maximum brightness of the Sun DirectionalLight, visible during the day.
-## Alias for Skydome.sun_light_energy.
+## Alias for SkyDome.sun_light_energy.
 @export_range(0, 16, 0.005) var sun_energy: float = 1.0 :
 	set(value):
 		if sky:
@@ -314,7 +306,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 @export_subgroup("Night")
 
 
-## Maximum strength of Moon DirectionalLight, visible at night. Alias for Skydome.moon_light_energy.
+## Maximum strength of Moon DirectionalLight, visible at night. Alias for SkyDome.moon_light_energy.
 @export_range(0, 16, 0.005) var moon_energy: float = 0.3 :
 	set(value):
 		if sky:
@@ -415,7 +407,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 @export_group("Overlays")
 
 
-## Overlays a zenith aligned spherical grid. Change color in Skydome. Alias for Skydome.show_azimuthal_grid.
+## Overlays a zenith aligned spherical grid. Change color in SkyDome. Alias for SkyDome.show_azimuthal_grid.
 @export var show_azimuthal_grid: bool = false :
 	set(value):
 		if sky:
@@ -425,7 +417,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 
 ## Overlays a zenith aligned with sky rotation. This is currently incorrect and should rotate around Polaris.
-## Change color in Skydome. Alias for Skydome.show_equatorial_grid.
+## Change color in SkyDome. Alias for SkyDome.show_equatorial_grid.
 @export var show_equatorial_grid: bool = false :
 	set(value):
 		if sky:
@@ -462,7 +454,7 @@ func _initialize() -> void:
 	if environment.sky == null or environment.sky.sky_material is PhysicalSkyMaterial:
 		environment.sky = Sky.new()
 		environment.sky.sky_material = ShaderMaterial.new()
-		environment.sky.sky_material.shader = sky_shader
+		environment.sky.sky_material.shader = load(SKY_SHADER)
 		
 	# Set a reference to the sky material for easy access.
 	sky_material = environment.sky.sky_material
@@ -491,12 +483,12 @@ func _initialize() -> void:
 		moon.owner = get_tree().edited_scene_root
 		moon.shadow_enabled = true
 
-	if has_node("Skydome"):
-		sky = $Skydome
+	if has_node("SkyDome"):
+		sky = $SkyDome
 		sky.environment = environment
 	elif is_inside_tree():
-		sky = Skydome.new()
-		sky.name = "Skydome"
+		sky = SkyDome.new()
+		sky.name = "SkyDome"
 		add_child(sky, true)
 		sky.owner = get_tree().edited_scene_root
 		sky.sun_light_path = "../SunLight"
@@ -510,7 +502,7 @@ func _initialize() -> void:
 		tod.name = "TimeOfDay"
 		add_child(tod, true)
 		tod.owner = get_tree().edited_scene_root
-		tod.dome_path = "../Skydome"
+		tod.dome_path = "../SkyDome"
 	if sky and not sky.day_night_changed.is_connected(_start_sky_contrib_tween):
 		sky.day_night_changed.connect(_start_sky_contrib_tween)
 

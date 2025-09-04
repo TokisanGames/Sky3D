@@ -4,24 +4,13 @@
 shader_type sky;
 render_mode use_debanding;
 
+group_uniforms general;
 uniform bool sky_visible = true;
-uniform bool show_azimuthal_grid = false;
-uniform vec4 azimuthal_grid_color = vec4(.871, .722, .529, 1.);
-uniform float azimuthal_grid_rotation_offset = 0.03;
-uniform bool show_equatorial_grid = false;
-uniform vec4 equatorial_grid_color = vec4(0., .75, 1., 1.);
-uniform float equatorial_grid_rotation_offset = 0.03;
-
-// Color correction
-group_uniforms General;
-uniform vec2 color_correction_params = vec2(0.0, 1.0);
+uniform vec2 color_correction = vec2(0.0, 1.0);
 uniform vec4 ground_color: source_color = vec4(0.3, 0.3, 0.3, 1.0);
-uniform float horizon_level = 0.0;
+uniform float horizon_offset = 0.0;
 
-// Moon and Deep Space
-
-// Atmospheric Scattering
-group_uniforms Atmospheric_Scattering_and_Colors;
+group_uniforms atmosphere;
 uniform float atm_darkness = 0.5;
 uniform float atm_sun_intensity = 18.0;
 uniform vec4 atm_day_tint: source_color = vec4(0.808, 0.91, 1.0, 1.0);
@@ -32,19 +21,17 @@ uniform float atm_thickness = 0.7;
 uniform vec3 atm_beta_ray = vec3(0.00001, 0.00001, 0.00003);
 uniform vec3 atm_beta_mie = vec3(0.00000003038); // Value computed by multiplying Mie, turbidity, and 0.000434.
 
-// Sun disk
-group_uniforms Sun_Disk;
+group_uniforms sun_disk;
 uniform vec4 sun_disk_color: source_color = vec4(0.996, 0.541, 0.14, 1.0);
 uniform float sun_disk_intensity = 2.0;
 uniform float sun_disk_size = 0.015;
 
-// Sun mie phase
-group_uniforms Sun_Mie_Scattering;
+group_uniforms sun_mie;
 uniform vec4 atm_sun_mie_tint: source_color = vec4(1.0);
 uniform float atm_sun_mie_intensity = 1.0;
 uniform vec3 atm_sun_partial_mie_phase = vec3(0.36, 1.64, 1.6);
 
-group_uniforms Moon;
+group_uniforms moon;
 uniform vec4 moon_color: source_color = vec4(1.0);
 uniform sampler2D moon_texture: source_color, repeat_disable;
 uniform vec3 moon_texture_alignment = vec3(7.0, 1.4, 4.8);
@@ -52,28 +39,26 @@ uniform bool moon_texture_flip_u;
 uniform bool moon_texture_flip_v;
 uniform float moon_size = 0.07;
 
-group_uniforms Moon_Mie_Scattering;
+group_uniforms moon_mie;
 uniform vec4 atm_moon_mie_tint: source_color = vec4(0.137, 0.184, 0.292, 1.0);
 uniform float atm_moon_mie_intensity = 0.17152;
 uniform vec3 atm_moon_partial_mie_phase = vec3(0.36, 1.64, 1.6);
 
-// Background
-group_uniforms Background_Texture;
-uniform sampler2D background_texture: source_color;
-uniform vec4 background_color: source_color = vec4(0.71, 0.71, 0.71, 0.855);
-
-// Stars Field
-group_uniforms Starfield;
-uniform vec4 stars_field_color: source_color = vec4(1.0);
-uniform sampler2D stars_field_texture: source_color;
+group_uniforms star_map;
+uniform vec4 starmap_color: source_color = vec4(0.71, 0.71, 0.71, 0.855);
+uniform sampler2D starmap_texture: source_color;
 uniform bool starmap_flip_u = false;
 uniform bool starmap_flip_v = false;
-uniform vec3 sky_alignment = vec3(2.68288, -0.25891, 0.40101);
-uniform float sky_rotation_offset = 9.38899;
-uniform float sky_rotation = 0.0; // For simulating Earth rotation.
-uniform float sky_tilt = 0.0; // For tilting the sky according to observer latitude in radians. (90° - latitude)
-uniform float stars_scintillation = 0.75;
-uniform float stars_scintillation_speed = 0.01;
+uniform vec3 starmap_alignment = vec3(2.68288, -0.25891, 0.40101);
+uniform float star_rotation_offset = 9.38899;
+uniform float star_rotation = 0.0; // For simulating Earth rotation.
+uniform float star_tilt = 0.0; // For tilting the sky according to observer latitude in radians. (90° - latitude)
+
+group_uniforms star_field;
+uniform vec4 star_field_color: source_color = vec4(1.0);
+uniform sampler2D star_field_texture: source_color;
+uniform float star_scintillation = 0.75;
+uniform float star_scintillation_speed = 0.01;
 uniform sampler2D noise_tex: source_color;
 
 /* Sky alignment values for a star map that is in galactic coordinates. Works for most star maps.
@@ -86,68 +71,56 @@ at midnight. The positions of Polaris, Vega, Rigel, and Alpha Centauri confirmed
 through various sources and calculations.
 */
 
-// Clouds
-group_uniforms Clouds;
-uniform bool clouds_visible = true;
-uniform float clouds_coverage = 0.5;
-uniform float clouds_thickness = 10.0;
-uniform float clouds_absorption = 2.0;
-uniform float clouds_sky_tint_fade = 0.5;
-uniform float clouds_intensity = 10.0;
-uniform float clouds_size = 2.0;
-uniform vec2 clouds_uv = vec2(0.16, 0.11);
-uniform float clouds_speed = 0.07;
-uniform vec2 clouds_direction = vec2(0.25);
-uniform vec4 clouds_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
-uniform vec4 clouds_horizon_light_color: source_color = vec4(0.98, 0.43, 0.15, 1.0);
-uniform vec4 clouds_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
-uniform sampler2D clouds_texture;
+group_uniforms cirrus_clouds;
+uniform bool cirrus_visible = true;
+uniform float cirrus_coverage = 0.5;
+uniform float cirrus_thickness = 10.0;
+uniform float cirrus_absorption = 2.0;
+uniform float cirrus_sky_tint_fade = 0.5;
+uniform float cirrus_intensity = 10.0;
+uniform float cirrus_size = 2.0;
+uniform vec2 cirrus_uv = vec2(0.16, 0.11);
+uniform float cirrus_speed = 0.07;
+uniform vec2 cirrus_direction = vec2(0.25);
+uniform vec4 cirrus_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
+uniform vec4 cirrus_horizon_light_color: source_color = vec4(0.98, 0.43, 0.15, 1.0);
+uniform vec4 cirrus_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
+uniform sampler2D cirrus_texture;
 
-group_uniforms Cumulus_Clouds;
-uniform bool cumulus_clouds_visible = true;
-uniform float cumulus_clouds_coverage = 0.55;
-uniform float cumulus_clouds_thickness = 0.0243;
-uniform float cumulus_clouds_absorption = 2.0;
-uniform float cumulus_clouds_noise_freq = 2.7;
-uniform float cumulus_clouds_sky_tint_fade = 0.0;
-uniform float cumulus_clouds_intensity = 1.0;
-uniform float cumulus_clouds_size = 0.5;
-uniform float cumulus_clouds_speed = 0.05;
-uniform vec3 cumulus_clouds_direction = vec3(0.25, 0.1, 0.25);
-uniform sampler2D cumulus_clouds_texture;
-uniform vec4 cumulus_clouds_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
-uniform vec4 cumulus_clouds_horizon_light_color: source_color = vec4(0.98, 0.443, 0.15, 1.0);
-uniform vec4 cumulus_clouds_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
-uniform vec3 cumulus_clouds_partial_mie_phase = vec3(0.95756, 1.04244, 0.412);
-uniform float cumulus_clouds_mie_intensity = 1.0;
+group_uniforms cumulus_clouds;
+uniform bool cumulus_visible = true;
+uniform float cumulus_coverage = 0.55;
+uniform float cumulus_thickness = 0.0243;
+uniform float cumulus_absorption = 2.0;
+uniform float cumulus_noise_freq = 2.7;
+uniform float cumulus_sky_tint_fade = 0.0;
+uniform float cumulus_intensity = 1.0;
+uniform float cumulus_size = 0.5;
+uniform float cumulus_speed = 0.05;
+uniform vec3 cumulus_direction = vec3(0.25, 0.1, 0.25);
+uniform sampler2D cumulus_texture;
+uniform vec4 cumulus_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
+uniform vec4 cumulus_horizon_light_color: source_color = vec4(0.98, 0.443, 0.15, 1.0);
+uniform vec4 cumulus_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
+uniform vec3 cumulus_partial_mie_phase = vec3(0.95756, 1.04244, 0.412);
+uniform float cumulus_mie_intensity = 1.0;
 
-group_uniforms Transform_Matrices;
+group_uniforms overlays;
+uniform bool show_azimuthal_grid = false;
+uniform vec4 azimuthal_grid_color : source_color = vec4(.871, .722, .529, 1.);
+uniform float azimuthal_grid_rotation_offset = 0.03;
+uniform bool show_equatorial_grid = false;
+uniform vec4 equatorial_grid_color : source_color = vec4(0., .75, 1., 1.);
+uniform float equatorial_grid_rotation_offset = 0.03;
+
+group_uniforms transform_matrices;
 uniform mat3 moon_matrix; // Set externally via GDScript.
 uniform mat3 deep_space_matrix; // Set externally via GDScript for star map rotation.
 
-const int kCUMULUS_CLOUDS_STEP = 10;
-const float k3PI8 = 3.0 / (8.0 * PI);
-
-float saturate(float value) {
-	return clamp(value, 0.0, 1.0);
-}
-
-vec3 saturateRGB(vec3 value) {
-	return clamp(value.rgb, 0.0, 1.0);
-}
-
-// pow3
-vec3 contrastLevel(vec3 vec, float level) {
-	return mix(vec, vec * vec * vec, level);
-}
-
-vec3 tonemapPhoto(vec3 color, float exposure, float level) {
-	color.rgb *= exposure;
-	return mix(color.rgb, 1.0 - exp(-color.rgb), level);
-}
+#include "Common.gdshaderinc"
 
 // Provides a transformation matrix when passed a vec3.
-mat3 rotationMatrix(vec3 r) {
+mat3 create_rotation_matrix(vec3 r) {
 	float c1 = cos(r.x), s1 = sin(r.x);
 	float c2 = cos(r.y), s2 = sin(r.y);
 	float c3 = cos(r.z), s3 = sin(r.z);
@@ -173,35 +146,35 @@ mat3 rotationMatrix(vec3 r) {
 	return rotZ * rotY * rotX; // Combine rotations in ZYX order
 }
 
-vec2 equirectUV(vec3 norm) {
+vec2 calc_equirect_uv(vec3 norm) {
 	float flipu = starmap_flip_u ? -1.0 : 1.0;
 	float flipv = starmap_flip_v ? -1.0 : 1.0;
-	float u = flipu * ((atan(norm.y, norm.x) + PI) / TAU); // 0 to 1 horizontally
-	float v = flipv * (acos(norm.z) / -PI); // 0 (north pole) to 1 (south pole)
+	float u = flipu * ((atan(norm.y, norm.x) + PI) * INV_TAU); // 0 to 1 horizontally
+	float v = -flipv * (acos(norm.z) * INV_PI); // 0 (north pole) to 1 (south pole)
 	return vec2(u, v);
 }
 
-vec3 get_moon_texture_equirectUV(vec3 dir) {
-	dir = moon_matrix * dir * rotationMatrix(moon_texture_alignment);
+vec3 sample_moon_texture(vec3 dir) {
+	dir = moon_matrix * dir * create_rotation_matrix(moon_texture_alignment);
 	dir.x = -dir.x;
 	dir.z = -dir.z;
 	float flipu = moon_texture_flip_u ? 1.0 : -1.0;
 	float flipv = moon_texture_flip_v ? 1.0 : -1.0;
-	float u = 0.5 + flipu * atan(dir.z, dir.x) / (2.0 * PI); // Longitude
-	float v = 0.5 + flipv * asin(dir.y) / PI; // Latitude
+	float u = 0.5 + flipu * atan(dir.z, dir.x) * INV_TAU; // Longitude
+	float v = 0.5 + flipv * asin(dir.y) * INV_PI; // Latitude
 	return texture(moon_texture, vec2(u, v)).rgb;
 }
 
-float disk(vec3 norm, vec3 coords, lowp float size) {
+float calc_disk_mask(vec3 norm, vec3 coords, lowp float size) {
 	float dist = length(norm - coords);
 	return 1.0 - step(size, dist);
 }
 
-float remap(float value, float fromMin, float fromMax, float toMin, float toMax) {
-	return toMin + (value - fromMin) * (toMax - toMin) / (fromMax - fromMin);
+float map_range(float value, float from_min, float from_max, float to_min, float to_max) {
+	return to_min + (value - from_min) * (to_max - to_min) / (from_max - from_min);
 }
 
-bool IntersectSphere(float r, vec3 origin, vec3 dir, out float t, out vec3 nrm) {
+bool ray_sphere_intersect(float r, vec3 origin, vec3 dir, out float t, out vec3 nrm) {
 	origin += vec3(0.0, 450.0, 0.0);
 	float a = dot(dir, dir);
 	float b = 2.0 * dot(origin, dir);
@@ -221,7 +194,7 @@ bool IntersectSphere(float r, vec3 origin, vec3 dir, out float t, out vec3 nrm) 
 
 // For rendering the moon. This function courtesy of Kelvin van Hoorn.
 // https://kelvinvanhoorn.com/2024/12/07/skybox-tutorial-godot/
-float sphere_intersect(vec3 ray_dir, vec3 sphere_pos, float radius) {
+float simple_sphere_intersect(vec3 ray_dir, vec3 sphere_pos, float radius) {
 	vec3 oc = -sphere_pos;
 	float b = dot(oc, ray_dir);
 	float c = dot(oc, oc) - radius * radius;
@@ -231,62 +204,29 @@ float sphere_intersect(vec3 ray_dir, vec3 sphere_pos, float radius) {
 	return mix(-1.0, -b - h, valid);
 }
 
-// Atmosphere Inc
+// Atmosphere
 //------------------------------------------------------------------------------
-const float RAYLEIGH_ZENITH_LENGTH = 8.4e3;
-const float MIE_ZENITH_LENGTH = 1.25e3;
 
-float rayleighPhase(float mu) {
-	return k3PI8 * (1.0 + mu * mu);
-}
+vec3 calc_atmospheric_scatter(float sr, float sm, vec2 mu, vec3 mult) {
+	vec3 beta_mie = atm_beta_mie;
+	vec3 beta_ray = atm_beta_ray * atm_thickness;
 
-float miePhase(float mu, vec3 partial) {
-	float denominator = partial.y - partial.z * mu;
-	float safe_denominator = max(denominator, 0.0001); // Prevent division by zero
-	return (4.0 * PI) * (partial.x) * (pow(safe_denominator, -1.5));
-}
+	vec3 extc_factor = clamp_rgb_to_unit(exp(-(beta_ray * sr + beta_mie * sm)));
 
-// Simplifield for more performance
-void simpleOpticalDepth(float y, out float sr, out float sm) {
-	y = max(0.03, y + 0.03) + atm_level_params.y;
-	y = 1.0 / (y * atm_level_params.x);
-	sr = y * RAYLEIGH_ZENITH_LENGTH;
-	sm = y * MIE_ZENITH_LENGTH;
-}
-
-// Paper based
-void opticalDepth(float y, out float sr, out float sm) {
-	y = max(0.0, y);
-	y = saturate(y * atm_level_params.x);
-
-	float zenith = acos(y);
-	zenith = cos(zenith) + 0.15 * pow(93.885 - ((zenith * 180.0) / PI), -1.253);
-	zenith = 1.0 / (zenith + atm_level_params.y);
-
-	sr = zenith * RAYLEIGH_ZENITH_LENGTH;
-	sm = zenith * MIE_ZENITH_LENGTH;
-}
-
-vec3 atmosphericScattering(float sr, float sm, vec2 mu, vec3 mult) {
-	vec3 betaMie = atm_beta_mie;
-	vec3 betaRay = atm_beta_ray * atm_thickness;
-
-	vec3 extcFactor = saturateRGB(exp(-(betaRay * sr + betaMie * sm)));
-
-	float extcFF = mix(saturate(atm_thickness * 0.5), 1.0, mult.x);
-	vec3 finalExtcFactor = mix(1.0 - extcFactor, (1.0 - extcFactor) * extcFactor, extcFF);
-	float rayleighPhase = rayleighPhase(mu.x);
-	vec3 BRT = betaRay * rayleighPhase;
-	vec3 BMT = betaMie * miePhase(mu.x, atm_sun_partial_mie_phase);
+	float extc_ff = mix(clamp_to_unit(atm_thickness * 0.5), 1.0, mult.x);
+	vec3 final_extc_factor = mix(1.0 - extc_factor, (1.0 - extc_factor) * extc_factor, extc_ff);
+	float rayleigh_phase = calc_rayleigh_phase(mu.x);
+	vec3 BRT = beta_ray * rayleigh_phase;
+	vec3 BMT = beta_mie * calc_mie_phase(mu.x, atm_sun_partial_mie_phase);
 	BMT *= atm_sun_mie_intensity * atm_sun_mie_tint.rgb;
 
-	vec3 BRMT = (BRT + BMT) / (betaRay + betaMie);
-	vec3 scatter = atm_sun_intensity * (BRMT * finalExtcFactor) * atm_day_tint.rgb * mult.y;
-	scatter = mix(scatter, scatter * (1.0 - extcFactor), atm_darkness);
+	vec3 BRMT = (BRT + BMT) / (beta_ray + beta_mie);
+	vec3 scatter = atm_sun_intensity * (BRMT * final_extc_factor) * atm_day_tint.rgb * mult.y;
+	scatter = mix(scatter, scatter * (1.0 - extc_factor), atm_darkness);
 
 	vec3 lcol =  mix(atm_day_tint.rgb, atm_horizon_light_tint.rgb, mult.x);
-	vec3 nscatter = (1.0 - extcFactor) * atm_night_tint.rgb;
-	nscatter += miePhase(mu.y, atm_moon_partial_mie_phase) *
+	vec3 nscatter = (1.0 - extc_factor) * atm_night_tint.rgb;
+	nscatter += calc_mie_phase(mu.y, atm_moon_partial_mie_phase) *
 		atm_moon_mie_tint.rgb * atm_moon_mie_intensity * 0.005;
 
 	return (scatter * lcol) + nscatter;
@@ -294,212 +234,212 @@ vec3 atmosphericScattering(float sr, float sm, vec2 mu, vec3 mult) {
 
 // Clouds
 //------------------------------------------------------------------------------
-float noiseClouds(vec2 coords, vec2 offset, float p_time) {
-	float speed = p_time * clouds_speed * .5; // .5 matches cumulus clouds
+const int CUMULUS_STEP = 10;
+
+float sample_cirrus_noise(vec2 coords, vec2 offset, float p_time) {
+	float speed = p_time * cirrus_speed * .5; // .5 matches cumulus clouds
 	vec2 wind = offset * speed;
 	vec2 wind2 = (offset + offset) * speed;
-	float a = textureLod(clouds_texture, coords.xy * clouds_uv - wind, 0.0).r;
-	float b = textureLod(clouds_texture, coords.xy * clouds_uv - wind2, 0.0).r;
+	float a = textureLod(cirrus_texture, coords.xy * cirrus_uv - wind, 0.0).r;
+	float b = textureLod(cirrus_texture, coords.xy * cirrus_uv - wind2, 0.0).r;
 	return ((a + b) * 0.5);
 }
 
-float noiseCloudsCumulus(vec3 p) {
+float sample_cumulus_noise(vec3 p) {
 	vec3 pos = vec3(p * 0.01);
 	pos.z *= 256.0;
 	vec2 offset = vec2(0.317, 0.123);
 	vec4 uv = vec4(0.0);
 	uv.xy = pos.xy + offset * floor(pos.z);
 	uv.zw = uv.xy + offset;
-	float x1 = textureLod(cumulus_clouds_texture, uv.xy, 0.0).r;
-	float x2 = textureLod(cumulus_clouds_texture, uv.zw, 0.0).r;
+	float x1 = textureLod(cumulus_texture, uv.xy, 0.0).r;
+	float x2 = textureLod(cumulus_texture, uv.zw, 0.0).r;
 	return mix(x1, x2, fract(pos.z));
 }
 
-float cloudsFBM(vec3 p, float l) {
+float calc_cumulus_fbm(vec3 p, float l) {
 	float ret;
-	ret = 0.51749673 * noiseCloudsCumulus(p);
+	ret = 0.51749673 * sample_cumulus_noise(p);
 	p *= l;
-	ret += 0.25584929 * noiseCloudsCumulus(p);
+	ret += 0.25584929 * sample_cumulus_noise(p);
 	p *= l;
-	ret += 0.12527603 * noiseCloudsCumulus(p);
+	ret += 0.12527603 * sample_cumulus_noise(p);
 	p *= l;
-	ret += 0.06255931 * noiseCloudsCumulus(p);
+	ret += 0.06255931 * sample_cumulus_noise(p);
 	return ret;
 }
 
-float cloudsDensity(vec2 p, vec2 offset, float p_time) {
-	float d = noiseClouds(p, offset, p_time);
-	float c = 1.0 - clouds_coverage;
+float calc_cirrus_density(vec2 p, vec2 offset, float p_time) {
+	float d = sample_cirrus_noise(p, offset, p_time);
+	float c = 1.0 - cirrus_coverage;
 	d = d - c;
 	//d += d;
-	return saturate(d);
+	return clamp_to_unit(d);
 }
 
-float cloudsDensityCumulus(vec3 p, vec3 offset, float t) {
+float calc_cumulus_density(vec3 p, vec3 offset, float t) {
 	vec3 pos = p * 0.0212242 - offset;
-	float dens = cloudsFBM(pos, cumulus_clouds_noise_freq);
+	float dens = calc_cumulus_fbm(pos, cumulus_noise_freq);
 	dens += dens;
 
-	float cov = 1.0-cumulus_clouds_coverage;
+	float cov = 1.0 - cumulus_coverage;
 	cov = smoothstep(0.00, (cov * 3.5) + t, dens);
 	dens *= cov;
-	dens = remap(dens, 1.0-cov, 1.0, 0.0, 1.0);
+	dens = map_range(dens, 1.0 - cov, 1.0, 0.0, 1.0);
 
-	return saturate(dens);
+	return clamp_to_unit(dens);
 }
 
-vec4 renderClouds(vec3 pos, float p_time) {
+vec4 render_cirrus_clouds(vec3 pos, float p_time) {
 	pos.xy = pos.xz / pos.y;
-	pos *= clouds_size;
-	float density = cloudsDensity(pos.xy, clouds_direction, p_time);
-	float sh = saturate(exp(-clouds_absorption * density));
-	float a = saturate(density * clouds_thickness);
-	return vec4(vec3(density*sh) * clouds_intensity, a);
+	pos *= cirrus_size;
+	float density = calc_cirrus_density(pos.xy, cirrus_direction, p_time);
+	float sh = clamp_to_unit(exp(-cirrus_absorption * density));
+	float a = clamp_to_unit(density * cirrus_thickness);
+	return vec4(vec3(density*sh) * cirrus_intensity, a);
 }
 
-vec4 renderCloudsCumulus(vec3 ro, vec3 rd, float am, vec3 sunPosition, vec3 moonPosition, float p_time) {
-	vec4 ret = vec4(0, 0, 0, 0);
-	vec3 wind = cumulus_clouds_direction * (p_time * cumulus_clouds_speed);
+vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_pos, float p_time) {
+	vec4 ret = vec4(0.);
+	vec3 wind = cumulus_direction * (p_time * cumulus_speed);
 	float a = 0.0;
 
-	// n and tt doesnt need to be initialized since it would be set by IntersectSphere
+	// n and tt doesnt need to be initialized since it would be set by ray_sphere_intersect
 	vec3 n; float tt;
-	if (IntersectSphere(500, ro, rd, tt, n)) {
-		float marchStep = float(kCUMULUS_CLOUDS_STEP) * cumulus_clouds_thickness;
-		vec3 dirStep = rd / rd.y * marchStep;
-		vec3 pos = n * cumulus_clouds_size;
+	if (ray_sphere_intersect(500., ro, rd, tt, n)) {
+		float march_step = float(CUMULUS_STEP) * cumulus_thickness;
+		vec3 dir_step = rd / rd.y * march_step;
+		vec3 pos = n * cumulus_size;
 
-		vec2 mu = vec2(dot(sunPosition, rd), dot(moonPosition, rd));
-		vec3 mph = ((miePhase(mu.x, cumulus_clouds_partial_mie_phase) * atm_sun_mie_tint.rgb) +
-			miePhase(mu.y, cumulus_clouds_partial_mie_phase) * am);
+		vec2 mu = vec2(dot(sun_pos, rd), dot(moon_pos, rd));
+		vec3 mph = ((calc_mie_phase(mu.x, cumulus_partial_mie_phase) * atm_sun_mie_tint.rgb) +
+			calc_mie_phase(mu.y, cumulus_partial_mie_phase) * am);
 
 		vec4 t = vec4(1.0);
-		t.rgb += (mph.rgb * cumulus_clouds_mie_intensity);
+		t.rgb += (mph.rgb * cumulus_mie_intensity);
 
-		for(int i = 0; i < kCUMULUS_CLOUDS_STEP; i++) {
+		for(int i = 0; i < CUMULUS_STEP; i++) {
 			float h = float(i) * 0.1; // / float(kCLOUDS_STEP);
-			float density = cloudsDensityCumulus(pos, wind, h);
-			float sh = saturate(exp(-cumulus_clouds_absorption * density * marchStep));
+			float density = calc_cumulus_density(pos, wind, h);
+			float sh = clamp_to_unit(exp(-cumulus_absorption * density * march_step));
 			t *= sh;
-			ret += (t * (exp(h) * 0.571428571) * density * marchStep);
+			ret += (t * (exp(h) * 0.571428571) * density * march_step);
 			a += (1.0 - sh) * (1.0 - a);
-			pos += dirStep;
+			pos += dir_step;
 		}
-		return vec4(ret.rgb * cumulus_clouds_intensity, a);
+		return vec4(ret.rgb * cumulus_intensity, a);
 	}
-	return vec4(ret.rgb * cumulus_clouds_intensity, a);
+	return vec4(ret.rgb * cumulus_intensity, a);
 }
 
-vec3 render_sky(vec3 worldPos, vec3 cloudsPos, vec3 sunPosition, vec3 moonPosition, vec3 deep_space_coords, float p_time) {
+// Main
+//------------------------------------------------------------------------------
+
+vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, vec3 deep_space_coords, float p_time) {
 	vec3 col = vec3(0.0);
 
 	vec4 angle_mult;
-	angle_mult.x = saturate(1.0 - sunPosition.y);
-	angle_mult.y = saturate(sunPosition.y + 0.45);
-	angle_mult.z = saturate(-sunPosition.y + 0.30);
-	angle_mult.w = saturate(-sunPosition.y + 0.60);
+	angle_mult.x = clamp_to_unit(1.0 - sun_pos.y);
+	angle_mult.y = clamp_to_unit(sun_pos.y + 0.45);
+	angle_mult.z = clamp_to_unit(-sun_pos.y + 0.30);
+	angle_mult.w = clamp_to_unit(-sun_pos.y + 0.60);
 
 	// Atmosphere
-	vec2 mu = vec2(dot(sunPosition, worldPos), dot(moonPosition, worldPos));
+	vec2 mu = vec2(dot(sun_pos, world_pos), dot(moon_pos, world_pos));
 	float sr, sm;
-	simpleOpticalDepth(worldPos.y + atm_level_params.z + horizon_level, sr, sm);
+	calc_simple_optical_depth(world_pos.y + atm_level_params.z - horizon_offset, sr, sm, atm_level_params.xy);
 
-	worldPos.y += horizon_level;
-	float horizonBlend = saturate((worldPos.y - 0.03) * 3.0);
-	float horizonBlendCumulus = saturate((worldPos.y + 0.01) * 50.0);
+	world_pos.y -= horizon_offset;
+	float horizonBlend = clamp_to_unit((world_pos.y - 0.03) * 3.0);
+	float horizonBlendCumulus = clamp_to_unit((world_pos.y + 0.01) * 50.0);
 
-	vec3 scatter = atmosphericScattering(sr, sm, mu.xy, angle_mult.xyz);
+	vec3 scatter = calc_atmospheric_scatter(sr, sm, mu.xy, angle_mult.xyz);
 	col.rgb += scatter.rgb;
 
-	// Near Space
-	vec3 nearSpace = vec3(0.0);
-	vec3 sunDisk = disk(worldPos, sunPosition, sun_disk_size) * sun_disk_color.rgb * scatter.rgb;
-	sunDisk *= sun_disk_intensity;
+	// Sun
+	vec3 sun_disk = calc_disk_mask(world_pos, sun_pos, sun_disk_size) * sun_disk_color.rgb * scatter.rgb;
+	sun_disk *= sun_disk_intensity;
 
-	// Moon-Moon
-	float moon_intersect = sphere_intersect(worldPos, moonPosition, moon_size);
+	// Moon
+	float moon_intersect = simple_sphere_intersect(world_pos, moon_pos, moon_size);
 	float moon_mask = moon_intersect > (-1. + sqrt(moon_size)) ? 1.0 : 0.0;
-	vec3 moon_normal = normalize(worldPos * moon_intersect - moonPosition);
+	vec3 moon_normal = normalize(world_pos * moon_intersect - moon_pos);
 
-	float moon_ndotl = clamp(dot(moon_normal, sunPosition), 0.0, 1.0);
-	vec3 _moon_texture = get_moon_texture_equirectUV(moon_normal);
-	vec3 moon_output = moon_mask * moon_ndotl * exp2(1.0) * _moon_texture * moon_color.rgb;
+	float moon_ndotl = clamp(dot(moon_normal, sun_pos), 0.0, 1.0);
+	vec3 moon_tex = sample_moon_texture(moon_normal);
+	vec3 moon_output = moon_mask * moon_ndotl * exp2(1.0) * moon_tex * moon_color.rgb;
 	float moonMask = (1.0 - moon_mask);
 
-	vec3 deepSpace = vec3(0.0);
-
+	// Deep space
+	
 	// Tilt the sky along the X-axis.
-	mat3 tilt = rotationMatrix(vec3(sky_tilt, 0.0, 0.0));
+	mat3 tilt = create_rotation_matrix(vec3(star_tilt, 0.0, 0.0));
 
 	// Rotation around Y-axis. For simulating Earth's rotation.
-	mat3 rotation = rotationMatrix(vec3(0.0, sky_rotation + sky_rotation_offset, 0.0));
+	mat3 rotation = create_rotation_matrix(vec3(0.0, star_rotation + star_rotation_offset, 0.0));
 
 	// Initial XYZ rotation for alignment.
-	mat3 alignment_xyz = rotationMatrix(sky_alignment);
+	mat3 alignment_xyz = create_rotation_matrix(starmap_alignment);
 
 	// Combine everything together to get the desired alignment.
-	vec3 final_alignment = normalize(alignment_xyz * rotation * tilt * worldPos);
+	vec3 final_alignment = normalize(alignment_xyz * rotation * tilt * world_pos);
 
 	// Now generate UV coordinates for the texture.
-	vec2 deepSpaceUV = equirectUV(normalize(final_alignment));
+	vec2 deep_space_uv = calc_equirect_uv(normalize(final_alignment));
 
-	// Background
-	vec3 deepSpaceBackground = textureLod(background_texture, deepSpaceUV, 0.0).rgb;
-	deepSpaceBackground *= background_color.rgb;
-	deepSpaceBackground = contrastLevel(deepSpaceBackground, background_color.a);
-	deepSpace.rgb += deepSpaceBackground.rgb * moonMask + moon_output;
+	// Star map
+	vec3 deep_space_background = textureLod(starmap_texture, deep_space_uv, 0.0).rgb;
+	deep_space_background *= starmap_color.rgb;
+	deep_space_background = adjust_contrast(deep_space_background, starmap_color.a);
+	vec3 deep_space = deep_space_background.rgb * moonMask + moon_output;
 
-	// Stars Field
-	float starsScintillation = textureLod(noise_tex, deepSpaceUV + (p_time * stars_scintillation_speed), 0.0).r;
-	starsScintillation = mix(1.0, starsScintillation * 1.5, stars_scintillation);
+	// Star Field
+	float star_scint = textureLod(noise_tex, deep_space_uv + (p_time * star_scintillation_speed), 0.0).r;
+	star_scint = mix(1.0, star_scint * 1.5, star_scintillation);
 
-	vec3 starsField = textureLod(stars_field_texture, deepSpaceUV, 0.0).rgb * stars_field_color.rgb;
-	starsField = saturateRGB(mix(starsField.rgb, starsField.rgb * starsScintillation, stars_scintillation));
-	starsField = saturateRGB(starsField.rgb);
-	//deepSpace.rgb -= saturate(starsField.r * 10.0);
-	deepSpace.rgb += starsField.rgb * moonMask;
-	deepSpace.rgb *= angle_mult.z;
-	col.rgb += sunDisk.rgb + deepSpace.rgb * horizonBlend;
+	vec3 star_field = textureLod(star_field_texture, deep_space_uv, 0.0).rgb * star_field_color.rgb;
+	star_field = clamp_rgb_to_unit(mix(star_field.rgb, star_field.rgb * star_scint, star_scintillation));
+	star_field = clamp_rgb_to_unit(star_field.rgb);
+	//deep_space.rgb -= clamp_to_unit(star_field.r * 10.0);
+	deep_space.rgb += star_field.rgb * moonMask;
+	deep_space.rgb *= angle_mult.z;
+	col.rgb += sun_disk.rgb + deep_space.rgb * horizonBlend;
 
 	// Clouds
-	if (clouds_visible) {
-		vec4 clouds = renderClouds(cloudsPos, p_time);
-		clouds.a = saturate(clouds.a);
-		clouds.rgb *= mix(mix(clouds_day_color.rgb, clouds_horizon_light_color.rgb, angle_mult.x), clouds_night_color.rgb, angle_mult.w);
+	if (cirrus_visible) {
+		vec4 cirrus_clouds = render_cirrus_clouds(clouds_pos, p_time);
+		cirrus_clouds.a = clamp_to_unit(cirrus_clouds.a);
+		cirrus_clouds.rgb *= mix(mix(cirrus_day_color.rgb, cirrus_horizon_light_color.rgb, angle_mult.x), cirrus_night_color.rgb, angle_mult.w);
 
-		clouds.a = mix(0.0, clouds.a, horizonBlend);
-		col.rgb = mix(col.rgb, clouds.rgb + mix(vec3(0.0), scatter, clouds_sky_tint_fade), clouds.a);
+		cirrus_clouds.a = mix(0.0, cirrus_clouds.a, horizonBlend);
+		col.rgb = mix(col.rgb, cirrus_clouds.rgb + mix(vec3(0.0), scatter, cirrus_sky_tint_fade), cirrus_clouds.a);
 	}
 
-	if (cumulus_clouds_visible) {
-		vec4 cumulusClouds = renderCloudsCumulus(vec3(0.0), cloudsPos, angle_mult.z, sunPosition, moonPosition, p_time);
-		cumulusClouds.a = saturate(cumulusClouds.a);
-		cumulusClouds.rgb *= mix(mix(cumulus_clouds_day_color.rgb, cumulus_clouds_horizon_light_color.rgb, angle_mult.x),
-			cumulus_clouds_night_color.rgb, angle_mult.w);
-		cumulusClouds.a = mix(0.0, cumulusClouds.a, horizonBlend);
-		col.rgb = mix(col.rgb, cumulusClouds.rgb + mix(vec3(0.0), scatter, cumulus_clouds_sky_tint_fade), cumulusClouds.a);
+	if (cumulus_visible) {
+		vec4 cumulus_clouds = render_cumulus_clouds(vec3(0.0), clouds_pos, angle_mult.z, sun_pos, moon_pos, p_time);
+		cumulus_clouds.a = clamp_to_unit(cumulus_clouds.a);
+		cumulus_clouds.rgb *= mix(mix(cumulus_day_color.rgb, cumulus_horizon_light_color.rgb, angle_mult.x),
+			cumulus_night_color.rgb, angle_mult.w);
+		cumulus_clouds.a = mix(0.0, cumulus_clouds.a, horizonBlend);
+		col.rgb = mix(col.rgb, cumulus_clouds.rgb + mix(vec3(0.0), scatter, cumulus_sky_tint_fade), cumulus_clouds.a);
 	}
 
-	col.rgb = mix(col.rgb, ground_color.rgb * scatter, saturate((-worldPos.y - atm_level_params.z) * 100.0));
-	col.rgb = tonemapPhoto(col.rgb, color_correction_params.y, color_correction_params.x);
+	col.rgb = mix(col.rgb, ground_color.rgb * scatter, clamp_to_unit((-world_pos.y - atm_level_params.z) * 100.0));
+	col.rgb = apply_photo_tonemap(col.rgb, color_correction.y, color_correction.x);
 	return col;
 }
 
-float fwidth_custom(float p) {
-	return length(vec2(dFdx(p), dFdy(p)));
-}
-
-vec4 quaternion_from_axis_angle(vec3 axis, float angle) {
+vec4 create_axis_angle_quat(vec3 axis, float angle) {
 	float s = sin(angle * 0.5);
 	return vec4(axis * s, cos(angle * 0.5));
 }
 
-vec3 rotate_vector(vec3 v, vec4 q) {
+vec3 rotate_vector_by_quat(vec3 v, vec4 q) {
 	vec3 t = 2.0 * cross(q.xyz, v);
 	return v + q.w * t + cross(q.xyz, t);
 }
 
-vec3 align_and_rotate(vec3 dir, vec3 target, float rotation_angle) {
+vec3 align_and_rotate_vector(vec3 dir, vec3 target, float rotation_angle) {
 	vec3 z_axis = vec3(0.0, 0.0, 1.0); // Original grid alignment
 
 	// First, align Z-axis with target (Polaris)
@@ -508,27 +448,27 @@ vec3 align_and_rotate(vec3 dir, vec3 target, float rotation_angle) {
 	float angle = acos(dot(z_axis, target));
 	float valid = step(0.0001, length(axis)); // 1.0 if length(axis) >= 0.0001
 	axis = normalize(axis);
-	vec4 align_quat = quaternion_from_axis_angle(axis, angle);
-	dir = mix(dir, rotate_vector(dir, align_quat), valid);
-	vec4 rot_quat = quaternion_from_axis_angle(vec3(0.0, 0.0, 1.0), rotation_angle);
-	dir = mix(dir, rotate_vector(dir, rot_quat), valid);
+	vec4 align_quat = create_axis_angle_quat(axis, angle);
+	dir = mix(dir, rotate_vector_by_quat(dir, align_quat), valid);
+	vec4 rot_quat = create_axis_angle_quat(vec3(0.0, 0.0, 1.0), rotation_angle);
+	dir = mix(dir, rotate_vector_by_quat(dir, rot_quat), valid);
 	return dir;
 }
 
-void draw_grid(vec3 dir, vec3 pole_dir, float rotation_angle, vec4 line_color, float grid_spacing, float line_thickness, inout vec3 color) {
+void render_grid(vec3 dir, vec3 pole_dir, float rotation_angle, vec4 line_color, float grid_spacing, float line_thickness, inout vec3 color) {
 	float spacing = max(grid_spacing, 0.001);
 	float thickness = max(line_thickness, 0.0001);
 
 	// Rotate dir with sidereal motion and align with pole_dir
-	dir = align_and_rotate(dir, pole_dir, rotation_angle);
+	dir = align_and_rotate_vector(dir, pole_dir, rotation_angle);
 
 	// Latitude / Circles / Theta Spherical coordinates
 	float theta = acos(dir.z);
-	float theta_deriv = fwidth_custom(theta);
+	float theta_deriv = fwidth(theta);
 	float circle_thickness = max(thickness, theta_deriv);
 	float circle = mod(theta, spacing);
 	float circle_line = 1.0 - smoothstep(0.0, circle_thickness * 1.5, abs(circle - circle_thickness * 0.5));
-	circle_line *= saturate(thickness / circle_thickness);
+	circle_line *= clamp_to_unit(thickness / circle_thickness);
 
 	// Add poles
 	float pole_thickness = circle_thickness;
@@ -542,11 +482,11 @@ void draw_grid(vec3 dir, vec3 pole_dir, float rotation_angle, vec4 line_color, f
 
 	// Longitude / Radial lines / Phi Spherical coordinates
 	float phi = atan(dir.y, dir.x);
-	float phi_deriv = fwidth_custom(phi);
+	float phi_deriv = fwidth(phi);
 	float radial_thickness = max(thickness, phi_deriv);
-	float radial = mod(phi + 3.14, spacing); // PI w/ less precision to remove moire
+	float radial = mod(phi + PI, spacing); // PI w/ less precision to remove moire
 	float radial_line = 1.0 - smoothstep(0.0, radial_thickness * 1.5, abs(radial - radial_thickness));
-	radial_line *= saturate(thickness / radial_thickness);
+	radial_line *= clamp_to_unit(thickness / radial_thickness);
 
 	float grid = max(radial_line, circle_line);
 	color += line_color.rgb * line_color.a * grid;
@@ -555,14 +495,14 @@ void draw_grid(vec3 dir, vec3 pole_dir, float rotation_angle, vec4 line_color, f
 void sky() {
 	float current_time = TIME;
 	vec3 col = vec3(0.0); // Set up the initial sky color which will be added to later to produce the final result.
-	vec3 worldPos = EYEDIR; // Original shader set this up in the vertex() function. For sky shaders the overall equivalent is EYEDIR.
-	vec3 cloudsPos = EYEDIR; // The same is used for cloud rendering.
-	vec3 sunPosition = LIGHT0_DIRECTION; // Redefined from now-deprecated _sun_direction.
-	vec3 moonPosition = LIGHT1_DIRECTION; // Redefined from now-deprecated _moon_direction.
+	vec3 world_pos = EYEDIR; // Original shader set this up in the vertex() function. For sky shaders the overall equivalent is EYEDIR.
+	vec3 clouds_pos = EYEDIR; // The same is used for cloud rendering.
+	vec3 sun_pos = LIGHT0_DIRECTION; // Redefined from now-deprecated _sun_direction.
+	vec3 moon_pos = LIGHT1_DIRECTION; // Redefined from now-deprecated _moon_direction.
 	vec3 deep_space_coords = (deep_space_matrix * EYEDIR).xyz;
 
 	if (sky_visible) {
-		col = render_sky(worldPos, cloudsPos, sunPosition, moonPosition, deep_space_coords, current_time);
+		col = render_sky(world_pos, clouds_pos, sun_pos, moon_pos, deep_space_coords, current_time);
 	}
 
 	// Draw overlay grids
@@ -570,13 +510,13 @@ void sky() {
 		float grid_thickness = 0.0002;
 		float grid_spacing = 0.261799; // 15 degrees
 		vec3 zenith_dir = vec3(0.0, 1.0, 0.0); // Y-axis aligned azimuthal
-		vec3 north_celestial_pole = rotationMatrix(vec3(sky_tilt, 0.0, 0.0)) * zenith_dir;
-		float rotation_angle = sky_rotation + sky_rotation_offset;
+		vec3 north_celestial_pole = create_rotation_matrix(vec3(star_tilt, 0.0, 0.0)) * zenith_dir;
+		float rotation_angle = star_rotation + star_rotation_offset;
 		if (show_azimuthal_grid) {
-			draw_grid(EYEDIR, zenith_dir, azimuthal_grid_rotation_offset, azimuthal_grid_color, grid_spacing, grid_thickness, col);
+			render_grid(EYEDIR, zenith_dir, azimuthal_grid_rotation_offset, azimuthal_grid_color, grid_spacing, grid_thickness, col);
 		}
 		if (show_equatorial_grid) {
-			draw_grid(EYEDIR, north_celestial_pole, rotation_angle + equatorial_grid_rotation_offset, equatorial_grid_color, grid_spacing, grid_thickness, col);
+			render_grid(EYEDIR, north_celestial_pole, rotation_angle + equatorial_grid_rotation_offset, equatorial_grid_color, grid_spacing, grid_thickness, col);
 		}
 	}
 

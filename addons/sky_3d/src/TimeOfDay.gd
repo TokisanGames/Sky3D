@@ -1,6 +1,10 @@
 # Copyright (c) 2023-2025 Cory Petkovsek and Contributors
 # Copyright (c) 2021 J. Cuellar
 
+## TimeOfDay is a component of [Sky3D].
+##
+## This class tracks the progress of time, as well as the planetary calculations. See [Sky3D].
+
 @tool
 class_name TimeOfDay
 extends Node
@@ -11,17 +15,18 @@ signal day_changed(value)
 signal month_changed(value)
 signal year_changed(value)
 
-var _update_timer: Timer
-var _last_update: int = 0
-
-const TOTAL_HOURS: int = 24
-const HALFPI : float = PI / 2.0
+const HOURS_PER_DAY: int = 24
 const RADIANS_PER_HOUR: float = PI / 12.0
+const HALFPI : float = PI / 2.0
 
 
 #####################
 ## Global 
 #####################
+
+var _update_timer: Timer
+var _last_update: int = 0
+
 
 @export_group("Global")
 @export var update_in_editor: bool = true :
@@ -53,7 +58,7 @@ const RADIANS_PER_HOUR: float = PI / 12.0
 
 
 func _init() -> void:
-	set_total_hours(total_hours)
+	set_current_time(current_time)
 	set_day(day)
 	set_month(month)
 	set_year(year)
@@ -76,7 +81,7 @@ func _ready() -> void:
 
 func _on_timeout() -> void:
 	if system_sync:
-		_get_date_time_os()
+		_update_time_from_os()
 	else:
 		var delta: float = 0.001 * (Time.get_ticks_msec() - _last_update)
 		_progress_time(delta)
@@ -102,7 +107,7 @@ func resume() -> void:
 ## Target
 #####################
 
-var _sky_dome: Skydome
+var _sky_dome: SkyDome
 @export var dome_path: NodePath: set = set_dome_path
 
 
@@ -124,23 +129,23 @@ var game_date: String = ""
 var game_time: String = ""
 @export var system_sync: bool = false
 @export var total_cycle_in_minutes: float = 15.0
-@export_range(0.,23.99) var total_hours: float = 7.0 : set = set_total_hours
+@export_range(0.,23.99) var current_time: float = 8.0 : set = set_current_time
 @export_range(0,31) var day: int = 1: set = set_day
 @export_range(0,12) var month: int = 1: set = set_month
 @export_range(-9999,9999) var year: int = 2025: set = set_year
 var date_time_os: Dictionary
 
 
-func set_total_hours(value: float) -> void:
-	if total_hours != value:
-		total_hours = value
-		while total_hours > 23.9999:
-			total_hours -= 24
+func set_current_time(value: float) -> void:
+	if current_time != value:
+		current_time = value
+		while current_time > 23.9999:
+			current_time -= 24
 			day += 1
-		while total_hours < 0.0000:
-			total_hours += 24
+		while current_time < 0.0000:
+			current_time += 24
 			day -= 1
-		emit_signal("time_changed", total_hours)
+		emit_signal("time_changed", current_time)
 		_update_game_datetime()
 		_update_celestial_coords()
 
@@ -259,13 +264,14 @@ func set_moon_coords_offset(value: Vector2) -> void:
 	_update_celestial_coords()
 
 
-func _get_total_hours_utc() -> float:
-	return total_hours - utc
+## Returns the current time at UTC 0
+func get_current_time_utc0() -> float:
+	return current_time - utc
 
 
 func _get_time_scale() -> float:
 	return (367.0 * year - (7.0 * (year + ((month + 9.0) / 12.0))) / 4.0 +\
-		(275.0 * month) / 9.0 + day - 730530.0) + total_hours / 24.0
+		(275.0 * month) / 9.0 + day - 730530.0) + current_time / 24.0
 
 
 func _get_oblecl() -> float:
@@ -278,7 +284,7 @@ func _get_oblecl() -> float:
 
 
 func set_time(hour: int, minute: int, second: int) -> void: 
-	set_total_hours(float(hour) + float(minute) / 60.0 + float(second) / 3600.0)
+	set_current_time(float(hour) + float(minute) / 60.0 + float(second) / 3600.0)
 
 
 func set_from_datetime_dict(datetime_dict: Dictionary) -> void:
@@ -293,9 +299,9 @@ func get_datetime_dict() -> Dictionary:
 		"year": year,
 		"month": month,
 		"day": day,
-		"hour": floor(total_hours),
-		"minute": floor(fmod(total_hours, 1.0) * 60.0),
-		"second": floor(fmod(total_hours * 60.0, 1.0) * 60.0)
+		"hour": floor(current_time),
+		"minute": floor(fmod(current_time, 1.0) * 60.0),
+		"second": floor(fmod(current_time * 60.0, 1.0) * 60.0)
 	}
 	return datetime_dict
 
@@ -310,10 +316,10 @@ func get_unix_timestamp() -> int:
 
 func _progress_time(delta: float) -> void:
 	if not is_zero_approx(time_cycle_duration()):
-		set_total_hours(total_hours + delta / time_cycle_duration() * TOTAL_HOURS)
+		set_current_time(current_time + delta / time_cycle_duration() * HOURS_PER_DAY)
 
 
-func _get_date_time_os() -> void:
+func _update_time_from_os() -> void:
 	date_time_os = Time.get_datetime_dict_from_system()
 	set_time(date_time_os.hour, date_time_os.minute, date_time_os.second)
 	set_day(date_time_os.day)
@@ -374,7 +380,7 @@ func _update_celestial_coords() -> void:
 
 func _compute_simple_sun_coords() -> void:
 	# PI/12.0 radians = 15 degrees => 1 hour is 15 degrees of rotation
-	var altitude: float = (_get_total_hours_utc() + longitude) * RADIANS_PER_HOUR
+	var altitude: float = (get_current_time_utc0() + longitude) * RADIANS_PER_HOUR
 	# Todo: _sun_coords should be in radians
 	# As it is, _sun_coords seems to be in both radians and degrees in different places, I'm surprised it works at all!
 	_sun_coords.y = rad_to_deg(PI - altitude)
@@ -444,7 +450,7 @@ func _compute_realistic_sun_coords() -> void:
 	# TODO: We need to convert this math to radians
 	# TODO: 15 is degrees per hour, we will need to convert to RADIANS_PER_HOUR
 	var GMST0: float = ((L/15) + 12)
-	_sideral_time = GMST0 + _get_total_hours_utc() + rad_to_deg(longitude) / 15  # +15/15
+	_sideral_time = GMST0 + get_current_time_utc0() + rad_to_deg(longitude) / 15  # +15/15
 	_local_sideral_time = deg_to_rad(_sideral_time * 15)
 	
 	var HA: float = (_sideral_time - RA) * 15

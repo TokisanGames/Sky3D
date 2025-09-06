@@ -393,8 +393,8 @@ func _compute_simple_sun_coords() -> void:
 	var altitude: float = (get_current_time_utc0() + longitude) * RADIANS_PER_HOUR
 	# Todo: _sun_coords should be in radians
 	# As it is, _sun_coords seems to be in both radians and degrees in different places, I'm surprised it works at all!
-	_sun_coords.y = rad_to_deg(PI - altitude)
-	_sun_coords.x = rad_to_deg(latitude)
+	_sun_coords.y = PI - altitude
+	_sun_coords.x = latitude
 
 
 func _compute_simple_moon_coords() -> void:

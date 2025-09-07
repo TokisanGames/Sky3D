@@ -263,15 +263,27 @@ func _update_time_from_os() -> void:
 ## Planetary
 #####################
 
-@export_group("Planetary And Location")
+@export_group("Geographic Coordinates")
+
+@export var calculate_moon: bool = true: set = set_calculate_moon
+@export var calculate_stars: bool = true: set = set_calculate_stars
 enum CelestialMode { SIMPLE, REALISTIC }
 @export var celestials_calculations: CelestialMode = CelestialMode.REALISTIC: set = set_celestials_calculations
-@export_range(-90, 90, 0.00001, "radians_as_degrees") var latitude: float = deg_to_rad(16.): set = set_latitude
-@export_range(-180, 180, 0.00001, "radians_as_degrees") var longitude: float = deg_to_rad(108.): set = set_longitude
-@export_range(-12,14,.25) var utc: float = 7.0: set = set_utc
-@export var compute_moon_coords: bool = true: set = set_compute_moon_coords
-@export var compute_deep_space_coords: bool = true: set = set_compute_deep_space_coords
-@export var moon_coords_offset: Vector2 = Vector2(0.0, 0.0): set = set_moon_coords_offset
+
+var latitude: float = deg_to_rad(16.): set = set_latitude
+var longitude: float = deg_to_rad(108.): set = set_longitude
+var utc: float = 7.0: set = set_utc
+## Set the radial distance between the moon and the sun along the shared path of their orbit.[br]
+## Example values:[br]
+## * 180 degrees away from the sun on the opposite side of the sky.[br]
+## * 90 degrees in front of the sun.[br]
+## * -90 degrees behind the sun.[br]
+var moon_altitude_offset: float = deg_to_rad(90.):
+	set(value):
+		moon_altitude_offset = value
+		_update_celestial_coords()
+
+
 var _sun_coords: Vector2 = Vector2.ZERO
 var _moon_coords: Vector2 = Vector2.ZERO
 var _sun_distance: float
@@ -281,6 +293,43 @@ var _sideral_time: float
 var _local_sideral_time: float
 var _sun_orbital_elements := OrbitalElements.new()
 var _moon_orbital_elements := OrbitalElements.new()
+
+
+func _property_can_revert(property: StringName) -> bool:
+	return property in [ &"latitude", &"longitude", &"utc", &"moon_altitude_offset" ]
+
+
+func _property_get_revert(property: StringName) -> Variant:
+	match property:
+		&"latitude": return deg_to_rad(16.)
+		&"longitude": return deg_to_rad(108.)
+		&"utc": return 7.
+		&"moon_altitude_offset": return deg_to_rad(90.)
+	return null
+
+
+func _get_property_list() -> Array:
+	var arr: Array = []
+	var dict: Dictionary = {
+		"type": TYPE_FLOAT,
+		"usage": PROPERTY_USAGE_DEFAULT,
+		"hint": PROPERTY_HINT_RANGE,
+	}
+	if celestials_calculations == CelestialMode.REALISTIC:
+		dict.name = &"latitude"
+		dict.hint_string = "-180.,180.,0.00001,radians_as_degrees"
+		arr.append(dict.duplicate())
+	dict.name = &"longitude"
+	dict.hint_string = "-180.,180.,0.00001,radians_as_degrees"
+	arr.append(dict.duplicate())
+	dict.name = &"utc"
+	dict.hint_string = "-12,14,.25"
+	arr.append(dict.duplicate())
+	if celestials_calculations == CelestialMode.SIMPLE:
+		dict.name = &"moon_altitude_offset"
+		dict.hint_string = "-180.,180.,0.001,radians_as_degrees"
+		arr.append(dict.duplicate())
+	return arr
 
 
 func set_celestials_calculations(value: int) -> void:
@@ -304,19 +353,14 @@ func set_utc(value: float) -> void:
 	_update_celestial_coords()
 
 
-func set_compute_moon_coords(value: bool) -> void:
-	compute_moon_coords = value
+func set_calculate_moon(value: bool) -> void:
+	calculate_moon = value
 	_update_celestial_coords()
 	notify_property_list_changed()
 	
 
-func set_compute_deep_space_coords(value: bool) -> void:
-	compute_deep_space_coords = value
-	_update_celestial_coords()
-
-
-func set_moon_coords_offset(value: Vector2) -> void:
-	moon_coords_offset = value
+func set_calculate_stars(value: bool) -> void:
+	calculate_stars = value
 	_update_celestial_coords()
 
 
@@ -335,53 +379,50 @@ func _get_oblecl() -> float:
 
 
 func _update_celestial_coords() -> void:
-	if not _sky_dome:
+	if not (is_instance_valid(_sky_dome) and _sky_dome.is_scene_built):
 		return
 
-	match celestials_calculations:
-		CelestialMode.SIMPLE:
+	#TODO Remove double indent before merge
+	if celestials_calculations == CelestialMode.SIMPLE:
 			_compute_simple_sun_coords()
 			_sky_dome.sun_altitude = _sun_coords.y
 			_sky_dome.sun_azimuth = _sun_coords.x
-			if compute_moon_coords:
+			if calculate_moon:
 				_compute_simple_moon_coords()
 				_sky_dome.moon_altitude = _moon_coords.y
 				_sky_dome.moon_azimuth = _moon_coords.x
-			
-			if compute_deep_space_coords:
-				if _sky_dome.is_scene_built:
-					_sky_dome.sky_material.set_shader_parameter("star_tilt", HALFPI - latitude)
-		
-		CelestialMode.REALISTIC:
+			if calculate_stars:
+				var simple_sideral_time := get_current_time_utc0() * RADIANS_PER_HOUR + longitude
+				if _sky_dome.sky_material:
+					_sky_dome.sky_material.set_shader_parameter("star_tilt", -HALFPI)
+					_sky_dome.sky_material.set_shader_parameter("star_rotation", HALFPI - simple_sideral_time)
+	else:
 			_compute_realistic_sun_coords()
 			_sky_dome.sun_altitude = -_sun_coords.y
 			_sky_dome.sun_azimuth = -_sun_coords.x
-			if compute_moon_coords:
+			if calculate_moon:
 				_compute_realistic_moon_coords()
 				_sky_dome.moon_altitude = -_moon_coords.y
 				_sky_dome.moon_azimuth = -_moon_coords.x
-			
-			if compute_deep_space_coords:
-				if _sky_dome.is_scene_built:
-					_sky_dome.sky_material.set_shader_parameter("star_tilt", latitude - HALFPI)
-					_sky_dome.sky_material.set_shader_parameter("star_rotation", -_local_sideral_time)
+			if calculate_stars:
+				_sky_dome.sky_material.set_shader_parameter("star_tilt", latitude - HALFPI)
+				_sky_dome.sky_material.set_shader_parameter("star_rotation", -_local_sideral_time)
 	_sky_dome.update_moon_coords()
 
 
 func _compute_simple_sun_coords() -> void:
-	# PI/12.0 radians = 15 degrees => 1 hour is 15 degrees of rotation
-	var altitude: float = (get_current_time_utc0() + longitude) * RADIANS_PER_HOUR
-	# Todo: _sun_coords should be in radians
-	# As it is, _sun_coords seems to be in both radians and degrees in different places, I'm surprised it works at all!
-	_sun_coords.y = PI - altitude
-	_sun_coords.x = latitude
+	var azimuthal_progress: float = get_current_time_utc0() * RADIANS_PER_HOUR + longitude
+	_sun_coords.y = fmod(PI - azimuthal_progress + TAU, TAU) # Altitude, Equator at zenith, poles at horizon
+	_sun_coords.x = HALFPI # Azimuth, east-west progression
+	# Optional: Simple declination approx for seasons 
+	# _sun_coords.x += sin(2*PI*(day_of_year/365)) * deg_to_rad(23.5))
 
 
 func _compute_simple_moon_coords() -> void:
-	_moon_coords.y = (180.0 - _sun_coords.y) + moon_coords_offset.y
-	_moon_coords.x = (180.0 + _sun_coords.x) + moon_coords_offset.x
+	_moon_coords.y = fmod(moon_altitude_offset - _sun_coords.y + TAU, TAU)  # Altitude
+	_moon_coords.x = PI + _sun_coords.x  # Azimuth
 
-
+	
 func _compute_realistic_sun_coords() -> void:
 	# Orbital Elements
 	_sun_orbital_elements.get_orbital_elements(0, _get_time_scale())

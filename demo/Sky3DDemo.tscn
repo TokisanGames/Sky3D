@@ -19,7 +19,7 @@ script/source = "extends Node3D
 ## Included as a scene script (a bad practice) so it does not conflict with the Terrain3D demo when
 ## used together.
 
-@export var MOVE_SPEED: float = 5.0
+@export var move_speed: float = 60.0
 
 const CAMERA_MAX_PITCH: float = deg_to_rad(70)
 const CAMERA_MIN_PITCH: float = deg_to_rad(-89.9)
@@ -41,7 +41,7 @@ func _ready() -> void:
 
 
 func _physics_process(p_delta: float) -> void:
-	position += get_camera_relative_input().normalized() * MOVE_SPEED
+	position += get_camera_relative_input().normalized() * move_speed * p_delta
 
 
 func _input(p_event: InputEvent) -> void:
@@ -90,9 +90,9 @@ func get_camera_relative_input() -> Vector3:
 	if Input.is_key_pressed(KEY_Q): # Down
 		input_dir -= global_transform.basis.y
 	if Input.is_key_pressed(KEY_KP_ADD) or Input.is_key_pressed(KEY_EQUAL):
-		MOVE_SPEED = clamp(MOVE_SPEED + .5, 5, 9999)
+		move_speed = clamp(move_speed + .5, 5, 9999)
 	if Input.is_key_pressed(KEY_KP_SUBTRACT) or Input.is_key_pressed(KEY_MINUS):
-		MOVE_SPEED = clamp(MOVE_SPEED - .5, 5, 9999)
+		move_speed = clamp(move_speed - .5, 5, 9999)
 	return input_dir
 	
 	
@@ -140,7 +140,7 @@ shader_parameter/moon_texture_flip_u = false
 shader_parameter/moon_texture_flip_v = false
 shader_parameter/moon_size = 0.07
 shader_parameter/atm_moon_mie_tint = Color(0.137255, 0.184314, 0.292196, 1)
-shader_parameter/atm_moon_mie_intensity = 0.236582
+shader_parameter/atm_moon_mie_intensity = 0.0
 shader_parameter/atm_moon_partial_mie_phase = Vector3(0.36, 1.64, 1.6)
 shader_parameter/starmap_color = Color(0.709804, 0.709804, 0.709804, 0.854902)
 shader_parameter/starmap_texture = ExtResource("5_0j4pb")
@@ -163,8 +163,8 @@ shader_parameter/cirrus_sky_tint_fade = 0.5
 shader_parameter/cirrus_intensity = 10.0
 shader_parameter/cirrus_size = 1.0
 shader_parameter/cirrus_uv = Vector2(0.16, 0.11)
-shader_parameter/cirrus_position1 = Vector2(0.0510598, 7.53402e-06)
-shader_parameter/cirrus_position2 = Vector2(0.0510598, 7.53402e-06)
+shader_parameter/cirrus_position1 = Vector2(0.597194, 5.86677e-06)
+shader_parameter/cirrus_position2 = Vector2(0.597194, 5.86677e-06)
 shader_parameter/cirrus_day_color = Color(0.824, 0.875, 1, 1)
 shader_parameter/cirrus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
 shader_parameter/cirrus_night_color = Color(0.09, 0.094, 0.129, 1)
@@ -177,7 +177,7 @@ shader_parameter/cumulus_noise_freq = 2.7
 shader_parameter/cumulus_sky_tint_fade = 0.0
 shader_parameter/cumulus_intensity = 0.6
 shader_parameter/cumulus_size = 0.5
-shader_parameter/cumulus_position = Vector2(10.2548, 3.76697e-05)
+shader_parameter/cumulus_position = Vector2(7.98623, 2.93344e-05)
 shader_parameter/cumulus_texture = ExtResource("5_rt0jr")
 shader_parameter/cumulus_day_color = Color(0.823529, 0.87451, 1, 1)
 shader_parameter/cumulus_horizon_light_color = Color(0.98, 0.43, 0.15, 1)
@@ -200,7 +200,7 @@ background_mode = 2
 sky = SubResource("Sky_0j4pb")
 ambient_light_source = 3
 ambient_light_color = Color(0.391144, 0.232463, 0.160552, 1)
-ambient_light_sky_contribution = 0.793356
+ambient_light_sky_contribution = 0.7
 reflected_light_source = 2
 tonemap_mode = 3
 tonemap_white = 6.0

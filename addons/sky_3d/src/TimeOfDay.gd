@@ -31,6 +31,8 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	dome_path = dome_path
+
 	_update_timer = Timer.new()
 	_update_timer.name = "Timer"
 	add_child(_update_timer)

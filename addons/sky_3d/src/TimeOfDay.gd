@@ -363,9 +363,6 @@ func _update_celestial_coords() -> void:
 				_sky_dome.moon_azimuth = _moon_coords.x
 			
 			if compute_deep_space_coords:
-				var x: Quaternion = Quaternion.from_euler(Vector3(HALFPI + latitude, 0.0, 0.0))
-				var y: Quaternion = Quaternion.from_euler(Vector3(0.0, 0.0, deg_to_rad(_sun_coords.y)))
-				_sky_dome.deep_space_quat = x * y
 				if _sky_dome.is_scene_built:
 					_sky_dome.sky_material.set_shader_parameter("star_tilt", HALFPI - latitude)
 		
@@ -379,9 +376,6 @@ func _update_celestial_coords() -> void:
 				_sky_dome.moon_azimuth = -_moon_coords.x
 			
 			if compute_deep_space_coords:
-				var x: Quaternion = Quaternion.from_euler(Vector3(HALFPI + latitude, 0.0, 0.0) )
-				var y: Quaternion = Quaternion.from_euler(Vector3(0.0, 0.0, PI - _local_sideral_time))
-				_sky_dome.deep_space_quat = x * y
 				if _sky_dome.is_scene_built:
 					_sky_dome.sky_material.set_shader_parameter("star_tilt", latitude - HALFPI)
 					_sky_dome.sky_material.set_shader_parameter("star_rotation", -_local_sideral_time)

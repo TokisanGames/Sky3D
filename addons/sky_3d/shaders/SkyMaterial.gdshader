@@ -113,8 +113,7 @@ uniform vec4 equatorial_grid_color : source_color = vec4(0., .75, 1., 1.);
 uniform float equatorial_grid_rotation_offset = 0.03;
 
 group_uniforms transform_matrices;
-uniform mat3 moon_matrix; // Set externally via GDScript.
-uniform mat3 deep_space_matrix; // Set externally via GDScript for star map rotation.
+uniform mat3 moon_matrix; // Calculated externally via GDScript.
 
 #include "Common.gdshaderinc"
 
@@ -294,7 +293,7 @@ vec4 render_cirrus_clouds(vec3 pos) {
 	return vec4(vec3(density*sh) * cirrus_intensity, a);
 }
 
-vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_pos, float p_time) {
+vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_pos) {
 	vec4 ret = vec4(0.);
 	vec3 wind = -vec3(cumulus_position.x, 0.0, cumulus_position.y);
 	float a = 0.0;
@@ -330,7 +329,7 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 // Main
 //------------------------------------------------------------------------------
 
-vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, vec3 deep_space_coords, float p_time) {
+vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, float p_time) {
 	vec3 col = vec3(0.0);
 
 	vec4 angle_mult;
@@ -411,7 +410,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, ve
 	}
 
 	if (cumulus_visible) {
-		vec4 cumulus_clouds = render_cumulus_clouds(vec3(0.0), clouds_pos, angle_mult.z, sun_pos, moon_pos, p_time);
+		vec4 cumulus_clouds = render_cumulus_clouds(vec3(0.0), clouds_pos, angle_mult.z, sun_pos, moon_pos);
 		cumulus_clouds.a = clamp_to_unit(cumulus_clouds.a);
 		cumulus_clouds.rgb *= mix(mix(cumulus_day_color.rgb, cumulus_horizon_light_color.rgb, angle_mult.x),
 			cumulus_night_color.rgb, angle_mult.w);
@@ -494,10 +493,9 @@ void sky() {
 	vec3 clouds_pos = EYEDIR; // The same is used for cloud rendering.
 	vec3 sun_pos = LIGHT0_DIRECTION; // Redefined from now-deprecated _sun_direction.
 	vec3 moon_pos = LIGHT1_DIRECTION; // Redefined from now-deprecated _moon_direction.
-	vec3 deep_space_coords = (deep_space_matrix * EYEDIR).xyz;
 
 	if (sky_visible) {
-		col = render_sky(world_pos, clouds_pos, sun_pos, moon_pos, deep_space_coords, current_time);
+		col = render_sky(world_pos, clouds_pos, sun_pos, moon_pos, current_time);
 	}
 
 	// Draw overlay grids

@@ -129,7 +129,6 @@ func _ready() -> void:
 	update_cumulus_texture()
 	
 	# Stars
-	update_deep_space_basis()
 	update_starmap_color()
 	update_starmap_texture()
 	update_star_field_color()
@@ -1486,7 +1485,6 @@ func update_cumulus_size() -> void:
 @export var star_field_color: Color = Color.WHITE: set = set_star_field_color
 ## For aligning the star map texture map to known reference points. See [annotation SkyDome.show_alignment_lasers].
 @export var starmap_alignment: Vector3 = Vector3(2.68288, -0.25891, 0.40101): set = set_starmap_alignment
-var deep_space_euler: Vector3 = Vector3(0, 0, 0.0): set = set_deep_space_euler # DEPRECATED
 ## Offset value for realigning the sky's rotation if using a datetime too many years off from the "epoch" of 20 March 2025.[br][br]
 ## [b]Temporary; will eventually be removed in a future update.[/b]
 @export var star_rotation_offset: float = 9.38899: set = set_star_rotation_offset
@@ -1522,30 +1520,6 @@ func set_starmap_flip_v(value: bool) -> void:
 	sky_material.set_shader_parameter("starmap_flip_v", value)
 
 
-func set_deep_space_euler(value: Vector3) -> void:
-	deep_space_euler = value
-	_deep_space_basis = Basis.from_euler(value)
-	update_deep_space_basis()
-	var quat: Quaternion = _deep_space_basis.get_rotation_quaternion()
-	if deep_space_quat.angle_to(quat) < 0.01:
-		return
-	deep_space_quat = quat
-
-
-func set_deep_space_quat(value: Quaternion) -> void:
-	deep_space_quat = value
-	_deep_space_basis = Basis(value)
-	update_deep_space_basis()
-	var euler: Vector3 = _deep_space_basis.get_euler()
-	if deep_space_euler.angle_to(euler) < 0.01:
-		return
-	deep_space_euler = euler
-
-
-func update_deep_space_basis() -> void:
-	if !is_scene_built:
-		return
-	sky_material.set_shader_parameter("deep_space_matrix", _deep_space_basis)
 
 
 func set_starmap_color(value: Color) -> void:
@@ -1685,8 +1659,6 @@ func set_equatorial_grid_rotation_offset(value: float) -> void:
 const POLARIS_LASER_ALIGNMENT: Vector3 = Vector3(89.3707, 48.2213, 0.0) # Real-world azimuth is 311.7787.
 const VEGA_LASER_ALIGNMENT: Vector3 = Vector3(38.8, 281.666, 0.0) # Real-world azimuth is 78.334.
 const LASER_COLOR: Color = Color(1.0, 0.0, 0.0, 1.0)
-var deep_space_quat: Quaternion = Quaternion.IDENTITY: set = set_deep_space_quat
-var _deep_space_basis: Basis
 var _polaris_laser: MeshInstance3D
 var _vega_laser: MeshInstance3D
 var _laser_material: StandardMaterial3D

@@ -11,7 +11,7 @@
 class_name Sky3D
 extends WorldEnvironment
 
-## Emitted when the environment variable has changed.
+## Emitted when the environment has changed to a new resource.
 signal environment_changed
 
 const SKY_SHADER: String = "res://addons/sky_3d/shaders/SkyMaterial.gdshader"
@@ -49,7 +49,7 @@ var sky_material: ShaderMaterial
 @export_group("Visibility")
 
 
-## Enables the sky shader. Disable sky, lights, fog for a black sky or call hide_sky().
+## Enables the sky shader. Disable sky, lights, fog for a black sky or call [method hide_sky].
 @export var sky_enabled: bool = true :
 	set(value):
 		sky_enabled = value
@@ -68,7 +68,7 @@ var sky_material: ShaderMaterial
 			sky.cirrus_visible = value
 
 
-## Enables the Sun and Moon DirectionalLights.
+## Enables the Sun and Moon [DirectionalLight3D]s.
 @export var lights_enabled: bool = true :
 	set(value):
 		lights_enabled = value
@@ -77,7 +77,7 @@ var sky_material: ShaderMaterial
 			sky.moon_light_enabled = value
 	
 
-## Enables the screen space fog shader.
+## Enables the screen space fog shader. Sky3D also works with the other two fog methods built into Godot.
 @export var fog_enabled: bool = true :
 	set(value):
 		fog_enabled = value
@@ -85,7 +85,7 @@ var sky_material: ShaderMaterial
 			sky.fog_visible = value
 
 
-## Disables rendering of sky, fog, and lights
+## Disables rendering of sky, fog, and lights.
 func hide_sky() -> void:
 	sky_enabled = false
 	lights_enabled = false
@@ -93,7 +93,7 @@ func hide_sky() -> void:
 	clouds_enabled = false
 
 
-## Enables rendering of sky, fog, and lights
+## Enables rendering of sky, fog, and lights.
 func show_sky() -> void:
 	sky_enabled = true
 	lights_enabled = true
@@ -108,32 +108,32 @@ func show_sky() -> void:
 @export_group("Time")
 
 
-## Allows time to progress in the editor. Alias for TimeOfDay.update_in_editor.
+## Allows time to progress in the editor. Alias for [member TimeOfDay.editor_time_enabled].
 @export var editor_time_enabled: bool = true :
 	set(value):
 		if tod:
-			tod.update_in_editor = value
+			tod.editor_time_enabled = value
 	get:
-		return tod.update_in_editor if tod else editor_time_enabled
+		return tod.editor_time_enabled if tod else editor_time_enabled
 
 
-## Allows time to progress in game. Alias for TimeOfDay.update_in_game.
+## Allows time to progress in game. Alias for [member TimeOfDay.game_time_enabled].
 @export var game_time_enabled: bool = true :
 	set(value):
 		if tod:
-			tod.update_in_game = value
+			tod.game_time_enabled = value
 	get:
-		return tod.update_in_game if tod else game_time_enabled
+		return tod.game_time_enabled if tod else game_time_enabled
 
 
-## Readable game date string, eg. '2025-01-01'. Alias for TimeOfDay.game_date.
+## A readable game date string, eg. '2025-01-01'. Alias for [member TimeOfDay.game_date].
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var game_date: String = "" :
 	get:
 		return tod.game_date if tod else game_date
 		
 		
-## Readable game time string, e.g. '08:00:00'. Alias for TimeOfDay.game_time.
+## A readable game time string, e.g. '08:00:00'. Alias for [member TimeOfDay.game_time].
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var game_time: String = "" :
 	get:
@@ -141,8 +141,8 @@ var game_time: String = "" :
 
 
 ## The current in-game time in hours from 0.0 to 23.99. Smaller or larger values than the range will wrap.
-## Alias for TimeOfDay.current_time.
-@export_range(0.0, 23.99, 0.01) var current_time: float = 8.0 :
+## Alias for [member TimeOfDay.current_time].
+@export_range(0.0, 23.9998, 0.01) var current_time: float = 8.0 :
 	set(value):
 		if tod:
 			tod.current_time = value
@@ -150,23 +150,23 @@ var game_time: String = "" :
 		return tod.current_time if tod else current_time
 
 
-## The length of a full in-game day in real-world minutes.[br]
-## For example, setting this to [param 15] means a full in-game day takes 15 real-world minutes.[br]
-## Only valid if automatic time progression is enabled.[br]
-## Negative values moves time backwards.
-## Alias for TimeOfDay.total_cycle_in_minutes.
+## The total length of time for a complete day and night cycle in real world minutes. Setting this to
+## [param 15] means a full in-game day takes 15 real-world minutes. [member game_time_enabled] must be
+## enabled for this to work. Negative values moves time backwards. The Witcher 3 uses a 96 minute cycle. 
+## Adjust [member update_interval] to match. Shorter days needs more updates. Longer days need less.
+## Alias for [member TimeOfDay.minutes_per_day].
 @export_range(-1440, 1440, 0.1) var minutes_per_day: float = 15.0 :
 	set(value):
 		if tod:
-			tod.total_cycle_in_minutes = value
+			tod.minutes_per_day = value
 	get:
-		return tod.total_cycle_in_minutes if tod else minutes_per_day
+		return tod.minutes_per_day if tod else minutes_per_day
 
 
 ## Frequency of sky updates, per second. The smaller the number, the more frequent the updates and
 ## the smoother the animation. Set to [param 0.016] for 60fps, for example.[br][br]
 ## [b]Note:[/b] Setting this value too small may cause unwanted behavior. See [member Timer.wait_time].
-## Alias for TimeOfDay.update_interval.
+## Alias for [member TimeOfDay.update_interval].
 @export_range(0.016, 10.0) var update_interval: float = 0.016 :
 	set(value):
 		if tod:
@@ -185,13 +185,13 @@ func is_night() -> bool:
 	return sky and not sky.is_day()
 
 
-## Pauses time calculation. Alias for TimeOfDay.pause().
+## Pauses time calculation. Alias for [method TimeOfDay.pause].
 func pause() -> void:
 	if tod:
 		tod.pause()
 
 
-## Resumes time calculation. Alias for TimeOfDay.resume().
+## Resumes time calculation. Alias for [method TimeOfDay.resume].
 func resume() -> void:
 	if tod:
 		tod.resume()
@@ -224,8 +224,8 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 
 ## Light intensity scaled before the tonemapper. Softer highlights.
-## Alias for Environment.camera_attributes.
-## Connect this same resource to your Camera3D.attributes.
+## Alias for [member Environment.camera_attributes].
+## Connect this same resource to your [member Camera3D.attributes].
 @export_range(0, 16, 0.005) var camera_exposure: float = 1.0 :
 	set(value):
 		if camera_attributes:
@@ -235,8 +235,8 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 
 ## Light intensity scaled in post processing. Hotter highlights.
-## Alias for Environment.tonemap_exposure.
-## Connect this same resource to your Camera3D.environment.
+## Alias for [member Environment.tonemap_exposure].
+## Connect this same resource to your [member Camera3D.environment].
 @export_range(0, 16, 0.005) var tonemap_exposure: float = 1.0 :
 	set(value):
 		if environment:
@@ -245,7 +245,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return environment.tonemap_exposure if environment else tonemap_exposure
 
 
-## Light energy coming from the sky shader. Alias for SkyDome.exposure.
+## Light energy coming from the sky shader. Alias for [member SkyDome.exposure].
 @export_range(0, 16, 0.005) var skydome_energy: float = 1.0 :
 	set(value):
 		if sky:
@@ -254,7 +254,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return sky.exposure if sky else skydome_energy
 
 
-## Brightness of and light energy coming from the clouds. Alias for SkyDome.cumulus_intensity.
+## Brightness of and light energy coming from the clouds. Alias for [member SkyDome.cumulus_intensity].
 @export_range(0, 16, 0.005) var cloud_intensity: float = 0.6 :
 	set(value):
 		if sky:
@@ -264,7 +264,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 
 ## Maximum brightness of the Sun DirectionalLight, visible during the day.
-## Alias for SkyDome.sun_light_energy.
+## Alias for [member SkyDome.sun_light_energy].
 @export_range(0, 16, 0.005) var sun_energy: float = 1.0 :
 	set(value):
 		if sky:
@@ -273,7 +273,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return sky.sun_light_energy if sky else sun_energy
 
 
-## Opacity of Sun DirectionalLight shadow. Alias for SunLight.shadow_opacity.
+## Opacity of Sun DirectionalLight shadow. Alias for [member DirectionalLight3D.shadow_opacity].
 @export_range(0, 1, 0.005) var sun_shadow_opacity: float = 1.0 :
 	set(value):
 		if sun:
@@ -283,8 +283,8 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 
 ## Ratio of ambient light to sky light. Works when there are no Reflection Probes or GI.
-## Sets the target for Environment.ambient_light_sky_contribution, which may change at night
-## depending on night_ambient_boost and night_sky_contribution.
+## Sets the target for [member Environment.ambient_light_sky_contribution], which may change at night
+## depending on [member night_ambient_boost] and [member night_sky_contribution].
 @export_range(0, 1, 0.005) var sky_contribution: float = 1.0 :
 	set(value):
 		if environment:
@@ -294,7 +294,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 
 ## Strength of ambient light. Works when there are no Reflection Probes or GI, and
-## sky_contribution < 1. Alias for Environment.ambient_light_energy.
+## [member sky_contribution] < 1. Alias for [member Environment.ambient_light_energy].
 @export_range(0, 16, 0.005) var ambient_energy: float = 1.0 :
 	set(value):
 		environment.ambient_light_energy = value
@@ -306,7 +306,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 @export_subgroup("Night")
 
 
-## Maximum strength of Moon DirectionalLight, visible at night. Alias for SkyDome.moon_light_energy.
+## Maximum strength of Moon DirectionalLight, visible at night. Alias for [member SkyDome.moon_light_energy].
 @export_range(0, 16, 0.005) var moon_energy: float = 0.3 :
 	set(value):
 		if sky:
@@ -315,7 +315,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return sky.moon_light_energy if sky else moon_energy
 
 
-## Opacity of Moon DirectionalLight shadow. Alias for MoonLight.shadow_opacity.
+## Opacity of Moon DirectionalLight shadow. Alias for [member DirectionalLight3D.shadow_opacity].
 @export_range(0, 1, 0.005) var moon_shadow_opacity: float = 1.0 :
 	set(value):
 		if moon:
@@ -325,18 +325,18 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 
 ## Enables a lower sky_contribution at night, which allows more ambient energy to show.
-## To use, ensure there are no ReflectionProbes or GI. Set ambient_energy > 0.
-## Set night_sky_contribution < sky_contribution.
-## Then at night, Environment.ambient_light_sky_contribution will be set lower, which
-## will show more ambient_energy.
+## To use, ensure there are no ReflectionProbes or GI. Set [member ambient_energy] > 0.
+## Set [member night_sky_contribution] < [member sky_contribution].
+## Then at night, [member Environment.ambient_light_sky_contribution] will be set lower, which
+## will show more [member ambient_energy].
 @export var night_ambient_boost: bool = true :
 	set(value):
 		night_ambient_boost = value
 		_start_sky_contrib_tween()
 
 
-## Sets Environment.ambient_light_sky_contribution at night if night_ambient_boost is enabled.
-## See night_ambient_boost and sky_contribution.
+## Sets [member Environment.ambient_light_sky_contribution] at night if [member night_ambient_boost] is enabled.
+## See [member night_ambient_boost] and [member sky_contribution].
 @export_range(0, 1, 0.005) var night_sky_contribution: float = 0.7 :
 	set(value):
 		night_sky_contribution = value
@@ -351,7 +351,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 @export_subgroup("Auto Exposure")
 
 
-## Alias for CameraAttributes.auto_exposure_enabled.
+## Alias for [member CameraAttributes.auto_exposure_enabled].
 @export var auto_exposure: bool = false :
 	set(value):
 		if camera_attributes:
@@ -360,7 +360,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return camera_attributes.auto_exposure_enabled if camera_attributes else auto_exposure
 
 
-## Alias for CameraAttributes.auto_exposure_scale.
+## Alias for [member CameraAttributes.auto_exposure_scale].
 @export_range(0.01, 16, 0.005) var auto_exposure_scale: float = 0.4 :
 	set(value):
 		if camera_attributes:
@@ -369,7 +369,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return camera_attributes.auto_exposure_scale if camera_attributes else auto_exposure_scale
 
 
-## Alias for CameraAttributesPractical.auto_exposure_min_sensitivity.
+## Alias for [member CameraAttributesPractical.auto_exposure_min_sensitivity].
 @export_range(0, 1600, 0.5) var auto_exposure_min: float = 0.0 :
 	set(value):
 		if camera_attributes:
@@ -380,7 +380,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return camera_attributes.auto_exposure_min_sensitivity if camera_attributes else auto_exposure_min
 
 
-## Alias for CameraAttributesPractical.auto_exposure_max_sensitivity.
+## Alias for [member CameraAttributesPractical.auto_exposure_max_sensitivity].
 @export_range(30, 64000, 0.5) var auto_exposure_max: float = 800.0 :
 	set(value):
 		if camera_attributes:
@@ -391,7 +391,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return camera_attributes.auto_exposure_max_sensitivity if camera_attributes else auto_exposure_max
 
 
-## Alias for CameraAttributes.auto_exposure_speed.
+## Alias for [member CameraAttributes.auto_exposure_speed].
 @export_range(0.1, 64, 0.1) var auto_exposure_speed: float = 0.5 :
 	set(value):
 		if camera_attributes:
@@ -406,7 +406,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 @export_group("Weather")
 
-## Sets the wind speed. Alias for SkyDome.wind_speed.
+## Sets the wind speed. Alias for [member SkyDome.wind_speed].
 @export_custom(PROPERTY_HINT_RANGE, "0,120,0.1,or_greater,or_less,suffix:m/s") var wind_speed: float = 1.0:
 	set(value):
 		if sky:
@@ -415,7 +415,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return sky.wind_speed if sky else wind_speed
 
 ## Sets the wind direction. Zero means the wind is coming from the north, 90 from the east,
-## 180 from the south and 270 (or -90) from the west. Alias for SkyDome.wind_direction.
+## 180 from the south and 270 (or -90) from the west. Alias for [member SkyDome.wind_direction].
 @export_custom(PROPERTY_HINT_RANGE, "-180,180,0.1,radians_as_degrees") var wind_direction: float = 0.0:
 	set(value):
 		if sky:
@@ -431,7 +431,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 @export_group("Overlays")
 
 
-## Overlays a zenith aligned spherical grid. Change color in SkyDome. Alias for SkyDome.show_azimuthal_grid.
+## Overlays a zenith aligned spherical grid. Change color in SkyDome. Alias for [member SkyDome.show_azimuthal_grid].
 @export var show_azimuthal_grid: bool = false :
 	set(value):
 		if sky:
@@ -441,7 +441,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 
 ## Overlays a zenith aligned with sky rotation. This is currently incorrect and should rotate around Polaris.
-## Change color in SkyDome. Alias for SkyDome.show_equatorial_grid.
+## Change color in SkyDome. Alias for [member SkyDome.show_equatorial_grid].
 @export var show_equatorial_grid: bool = false :
 	set(value):
 		if sky:

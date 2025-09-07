@@ -1302,6 +1302,8 @@ func update_cirrus_size() -> void:
 @export var cumulus_mie_intensity: float = 1.0: set = set_cumulus_mie_intensity
 @export_range(0.0, 0.9999999, 0.0000001) var cumulus_mie_anisotropy: float = 0.206: set = set_cumulus_mie_anisotropy
 @export var cumulus_texture: Texture2D = CUMULUS_TEXTURE: set = _set_cumulus_texture
+## This parameter adjusts the scale of the noise texture, which indirectly affects the apparent height and 
+## speed of the clouds.
 @export var cumulus_size: float = 0.5: set = set_cumulus_size
 
 
@@ -1485,8 +1487,6 @@ func update_cumulus_size() -> void:
 ## For aligning the star map texture map to known reference points. See [annotation SkyDome.show_alignment_lasers].
 @export var starmap_alignment: Vector3 = Vector3(2.68288, -0.25891, 0.40101): set = set_starmap_alignment
 var deep_space_euler: Vector3 = Vector3(0, 0, 0.0): set = set_deep_space_euler # DEPRECATED
-
-
 ## Offset value for realigning the sky's rotation if using a datetime too many years off from the "epoch" of 20 March 2025.[br][br]
 ## [b]Temporary; will eventually be removed in a future update.[/b]
 @export var star_rotation_offset: float = 9.38899: set = set_star_rotation_offset

@@ -21,7 +21,7 @@ const HALFPI : float = PI / 2.0
 
 
 #####################
-## Global 
+## General 
 #####################
 
 var _update_timer: Timer
@@ -29,32 +29,27 @@ var _last_update: int = 0
 
 
 @export_group("Global")
-@export var update_in_editor: bool = true :
+
+## Allows time to progress in the editor. 
+@export var editor_time_enabled: bool = true :
 	set(value):
-		update_in_editor = value
+		editor_time_enabled = value
 		if Engine.is_editor_hint():
-			if update_in_editor:
+			if editor_time_enabled:
 				resume()
 			else:
 				pause()
 
 
-@export var update_in_game: bool = true :
+## Allows time to progress in game. 
+@export var game_time_enabled: bool = true :
 	set(value):
-		update_in_game = value
+		game_time_enabled = value
 		if not Engine.is_editor_hint():
-			if update_in_game:
+			if game_time_enabled:
 				resume()
 			else:
 				pause()
-
-
-@export_range(0.016, 10) var update_interval: float = 0.1 :
-	set(value):
-		update_interval = clamp(value, .016, 10)
-		if is_instance_valid(_update_timer):
-			_update_timer.wait_time = update_interval
-		resume()
 
 
 func _init() -> void:
@@ -98,8 +93,8 @@ func resume() -> void:
 	if is_instance_valid(_update_timer):
 		# Assume resuming from a pause, so timer only gets one tick
 		_last_update = Time.get_ticks_msec() - update_interval
-		if (Engine.is_editor_hint() and update_in_editor) or \
-				(not Engine.is_editor_hint() and update_in_game):
+		if (Engine.is_editor_hint() and editor_time_enabled) or \
+				(not Engine.is_editor_hint() and game_time_enabled):
 			_update_timer.start()
 
 
@@ -128,8 +123,23 @@ var game_date: String = ""
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var game_time: String = ""
 @export var system_sync: bool = false
-@export var total_cycle_in_minutes: float = 15.0
-@export_range(0.,23.99) var current_time: float = 8.0 : set = set_current_time
+## The total length of time for a complete day and night cycle in real world minutes. Setting this to
+## [param 15] means a full in-game day takes 15 real-world minutes. [member game_time_enabled] must be
+## enabled for this to work. Negative values moves time backwards. The Witcher 3 uses a 96 minute cycle. 
+## Adjust [member update_interval] to match. Shorter days needs more updates. Longer days need less.
+@export var minutes_per_day: float = 15.0
+## Celestial coordinates are updated based upon a timer, which continuously fires based on
+## this interval: [0.016, 10s]. Set to the lowest, 0.016 (60fps) if your [member minutes_per_day] is short,
+## such as less than 15 minutes. Witcher 3 uses a 96 minute day cycle, so 0.1 (10fps) is adequate.
+@export_range(0.016, 10) var update_interval: float = 0.016 :
+	set(value):
+		update_interval = clamp(value, .016, 10)
+		if is_instance_valid(_update_timer):
+			_update_timer.wait_time = update_interval
+		resume()
+
+
+@export_range(0.,23.9998) var current_time: float = 8.0 : set = set_current_time
 @export_range(0,31) var day: int = 1: set = set_day
 @export_range(0,12) var month: int = 1: set = set_month
 @export_range(-9999,9999) var year: int = 2025: set = set_year
@@ -200,7 +210,7 @@ func max_days_per_month() -> int:
 	
 
 func time_cycle_duration() -> float:
-	return total_cycle_in_minutes * 60.0
+	return minutes_per_day * 60.0
 
 
 #####################
@@ -357,7 +367,7 @@ func _update_celestial_coords() -> void:
 				var y: Quaternion = Quaternion.from_euler(Vector3(0.0, 0.0, deg_to_rad(_sun_coords.y)))
 				_sky_dome.deep_space_quat = x * y
 				if _sky_dome.is_scene_built:
-					_sky_dome.sky_material.set_shader_parameter("sky_tilt", HALFPI - latitude)
+					_sky_dome.sky_material.set_shader_parameter("star_tilt", HALFPI - latitude)
 		
 		CelestialMode.REALISTIC:
 			_compute_realistic_sun_coords()
@@ -373,8 +383,8 @@ func _update_celestial_coords() -> void:
 				var y: Quaternion = Quaternion.from_euler(Vector3(0.0, 0.0, PI - _local_sideral_time))
 				_sky_dome.deep_space_quat = x * y
 				if _sky_dome.is_scene_built:
-					_sky_dome.sky_material.set_shader_parameter("sky_tilt", latitude - HALFPI)
-					_sky_dome.sky_material.set_shader_parameter("sky_rotation", -_local_sideral_time)
+					_sky_dome.sky_material.set_shader_parameter("star_tilt", latitude - HALFPI)
+					_sky_dome.sky_material.set_shader_parameter("star_rotation", -_local_sideral_time)
 	_sky_dome.update_moon_coords()
 
 

@@ -60,7 +60,6 @@ func _init() -> void:
 	set_latitude(latitude)
 	set_longitude(longitude)
 	set_utc(utc)
-	_update_game_datetime()
 
 
 func _ready() -> void:
@@ -118,11 +117,22 @@ func set_dome_path(value: NodePath) -> void:
 #####################
 
 @export_group("DateTime")
-@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
-var game_date: String = ""
-@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
-var game_time: String = ""
+
+## Syncronize all of Sky3D with your system clock for a realtime sky, time, and date.
 @export var system_sync: bool = false
+@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
+var game_date: String = "":
+	get():
+		return "%04d-%02d-%02d" % [ year, month, day ]
+
+
+@export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
+var game_time: String = "":
+	get():
+		return "%02d:%02d:%02d" % [ floor(current_time), floor(fmod(current_time, 1.0) * 60.0), 
+			floor(fmod(current_time * 60.0, 1.0) * 60.0) ]
+
+
 ## The total length of time for a complete day and night cycle in real world minutes. Setting this to
 ## [param 15] means a full in-game day takes 15 real-world minutes. [member game_time_enabled] must be
 ## enabled for this to work. Negative values moves time backwards. The Witcher 3 uses a 96 minute cycle. 
@@ -156,7 +166,6 @@ func set_current_time(value: float) -> void:
 			current_time += 24
 			day -= 1
 		emit_signal("time_changed", current_time)
-		_update_game_datetime()
 		_update_celestial_coords()
 
 
@@ -170,7 +179,6 @@ func set_day(value: int) -> void:
 			month -= 1
 			day += max_days_per_month()
 		emit_signal("day_changed", day)
-		_update_game_datetime()
 		_update_celestial_coords()
 
 
@@ -184,7 +192,6 @@ func set_month(value: int) -> void:
 			month += 12
 			year -= 1
 		emit_signal("month_changed", month)
-		_update_game_datetime()
 		_update_celestial_coords()
 
 
@@ -192,7 +199,6 @@ func set_year(value: int) -> void:
 	if year != value:
 		year = value
 		emit_signal("year_changed", year)
-		_update_game_datetime()
 		_update_celestial_coords()
 
 
@@ -335,12 +341,6 @@ func _update_time_from_os() -> void:
 	set_day(date_time_os.day)
 	set_month(date_time_os.month)
 	set_year(date_time_os.year)
-	
-	
-func _update_game_datetime() -> void:
-	var datetime_dict: Dictionary = get_datetime_dict()
-	game_date = "%d-%02d-%02d" % [datetime_dict["year"], datetime_dict["month"], datetime_dict["day"]]
-	game_time = "%02d:%02d:%02d" % [datetime_dict["hour"], datetime_dict["minute"], datetime_dict["second"]]
 
 
 #####################

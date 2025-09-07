@@ -100,8 +100,11 @@ var _sky_dome: SkyDome
 @export var dome_path: NodePath:
 	set(value):
 		dome_path = value
-		if value:
-			_sky_dome = get_node_or_null(value)
+		if dome_path:
+			# DEPRECATED - Remove 2.2
+			if dome_path == NodePath("../Skydome"):
+				dome_path = NodePath("../SkyDome")
+			_sky_dome = get_node_or_null(dome_path)
 		_update_celestial_coords()
 
 

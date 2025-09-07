@@ -507,6 +507,9 @@ func _initialize() -> void:
 		moon.owner = get_tree().edited_scene_root
 		moon.shadow_enabled = true
 
+	# DEPRECATED - Remove 2.2
+	if has_node("Skydome"):
+		$Skydome.name = "SkyDome"
 	if has_node("SkyDome"):
 		sky = $SkyDome
 		sky.environment = environment

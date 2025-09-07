@@ -20,38 +20,6 @@ const RADIANS_PER_HOUR: float = PI / 12.0
 const HALFPI : float = PI / 2.0
 
 
-#####################
-## General 
-#####################
-
-var _update_timer: Timer
-var _last_update: int = 0
-
-
-@export_group("Global")
-
-## Allows time to progress in the editor. 
-@export var editor_time_enabled: bool = true :
-	set(value):
-		editor_time_enabled = value
-		if Engine.is_editor_hint():
-			if editor_time_enabled:
-				resume()
-			else:
-				pause()
-
-
-## Allows time to progress in game. 
-@export var game_time_enabled: bool = true :
-	set(value):
-		game_time_enabled = value
-		if not Engine.is_editor_hint():
-			if game_time_enabled:
-				resume()
-			else:
-				pause()
-
-
 func _init() -> void:
 	set_current_time(current_time)
 	set_day(day)
@@ -63,8 +31,6 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	set_dome_path(dome_path)
-
 	_update_timer = Timer.new()
 	_update_timer.name = "Timer"
 	add_child(_update_timer)
@@ -98,25 +64,67 @@ func resume() -> void:
 
 
 #####################
-## Target
+## General 
 #####################
 
+var _update_timer: Timer
+var _last_update: int = 0
 var _sky_dome: SkyDome
-@export var dome_path: NodePath: set = set_dome_path
+
+@export_group("General")
+
+## Allows time to progress in the editor. 
+@export var editor_time_enabled: bool = true :
+	set(value):
+		editor_time_enabled = value
+		if Engine.is_editor_hint():
+			if editor_time_enabled:
+				resume()
+			else:
+				pause()
 
 
-func set_dome_path(value: NodePath) -> void:
-	dome_path = value
-	if value:
-		_sky_dome = get_node_or_null(value)
-	_update_celestial_coords()
+## Allows time to progress in game. 
+@export var game_time_enabled: bool = true :
+	set(value):
+		game_time_enabled = value
+		if not Engine.is_editor_hint():
+			if game_time_enabled:
+				resume()
+			else:
+				pause()
+
+
+@export var dome_path: NodePath:
+	set(value):
+		dome_path = value
+		if value:
+			_sky_dome = get_node_or_null(value)
+		_update_celestial_coords()
+
+
+## The total length of time for a complete day and night cycle in real world minutes. Setting this to
+## [param 15] means a full in-game day takes 15 real-world minutes. [member game_time_enabled] must be
+## enabled for this to work. Negative values moves time backwards. The Witcher 3 uses a 96 minute cycle. 
+## Adjust [member update_interval] to match. Shorter days needs more updates. Longer days need less.
+@export var minutes_per_day: float = 15.0
+
+## Celestial coordinates are updated based upon a timer, which continuously fires based on
+## this interval: [0.016, 10s]. Set to the lowest, 0.016 (60fps) if your [member minutes_per_day] is short,
+## such as less than 15 minutes. The Witcher 3 uses a 96 minute day cycle, so 0.1 (10fps) is adequate.
+@export_range(0.016, 10) var update_interval: float = 0.016 :
+	set(value):
+		update_interval = clamp(value, .016, 10)
+		if is_instance_valid(_update_timer):
+			_update_timer.wait_time = update_interval
+		resume()
 
 
 #####################
 ## DateTime
 #####################
 
-@export_group("DateTime")
+@export_group("Current Time")
 
 ## Syncronize all of Sky3D with your system clock for a realtime sky, time, and date.
 @export var system_sync: bool = false
@@ -133,27 +141,10 @@ var game_time: String = "":
 			floor(fmod(current_time * 60.0, 1.0) * 60.0) ]
 
 
-## The total length of time for a complete day and night cycle in real world minutes. Setting this to
-## [param 15] means a full in-game day takes 15 real-world minutes. [member game_time_enabled] must be
-## enabled for this to work. Negative values moves time backwards. The Witcher 3 uses a 96 minute cycle. 
-## Adjust [member update_interval] to match. Shorter days needs more updates. Longer days need less.
-@export var minutes_per_day: float = 15.0
-## Celestial coordinates are updated based upon a timer, which continuously fires based on
-## this interval: [0.016, 10s]. Set to the lowest, 0.016 (60fps) if your [member minutes_per_day] is short,
-## such as less than 15 minutes. Witcher 3 uses a 96 minute day cycle, so 0.1 (10fps) is adequate.
-@export_range(0.016, 10) var update_interval: float = 0.016 :
-	set(value):
-		update_interval = clamp(value, .016, 10)
-		if is_instance_valid(_update_timer):
-			_update_timer.wait_time = update_interval
-		resume()
-
-
 @export_range(0.,23.9998) var current_time: float = 8.0 : set = set_current_time
 @export_range(0,31) var day: int = 1: set = set_day
 @export_range(0,12) var month: int = 1: set = set_month
 @export_range(-9999,9999) var year: int = 2025: set = set_year
-var date_time_os: Dictionary
 
 
 func set_current_time(value: float) -> void:
@@ -217,6 +208,50 @@ func max_days_per_month() -> int:
 
 func time_cycle_duration() -> float:
 	return minutes_per_day * 60.0
+
+
+func set_time(hour: int, minute: int, second: int) -> void: 
+	set_current_time(float(hour) + float(minute) / 60.0 + float(second) / 3600.0)
+
+
+func set_from_datetime_dict(datetime_dict: Dictionary) -> void:
+	set_year(datetime_dict.year)
+	set_month(datetime_dict.month)
+	set_day(datetime_dict.day)
+	set_time(datetime_dict.hour, datetime_dict.minute, datetime_dict.second)
+
+
+func get_datetime_dict() -> Dictionary:
+	var datetime_dict: Dictionary = {
+		"year": year,
+		"month": month,
+		"day": day,
+		"hour": floor(current_time),
+		"minute": floor(fmod(current_time, 1.0) * 60.0),
+		"second": floor(fmod(current_time * 60.0, 1.0) * 60.0)
+	}
+	return datetime_dict
+
+
+func set_from_unix_timestamp(timestamp: int) -> void:
+	set_from_datetime_dict(Time.get_datetime_dict_from_unix_time(timestamp))
+
+
+func get_unix_timestamp() -> int:
+	return Time.get_unix_time_from_datetime_dict(get_datetime_dict())
+
+
+func _progress_time(delta: float) -> void:
+	if not is_zero_approx(time_cycle_duration()):
+		set_current_time(current_time + delta / time_cycle_duration() * HOURS_PER_DAY)
+
+
+func _update_time_from_os() -> void:
+	var date_time_os: Dictionary = Time.get_datetime_dict_from_system()
+	set_time(date_time_os.hour, date_time_os.minute, date_time_os.second)
+	set_day(date_time_os.day)
+	set_month(date_time_os.month)
+	set_year(date_time_os.year)
 
 
 #####################
@@ -292,60 +327,6 @@ func _get_time_scale() -> float:
 
 func _get_oblecl() -> float:
 	return deg_to_rad(23.4393 - 2.563e-7 * _get_time_scale())
-
-
-#####################
-## DateTime
-#####################
-
-
-func set_time(hour: int, minute: int, second: int) -> void: 
-	set_current_time(float(hour) + float(minute) / 60.0 + float(second) / 3600.0)
-
-
-func set_from_datetime_dict(datetime_dict: Dictionary) -> void:
-	set_year(datetime_dict.year)
-	set_month(datetime_dict.month)
-	set_day(datetime_dict.day)
-	set_time(datetime_dict.hour, datetime_dict.minute, datetime_dict.second)
-
-
-func get_datetime_dict() -> Dictionary:
-	var datetime_dict: Dictionary = {
-		"year": year,
-		"month": month,
-		"day": day,
-		"hour": floor(current_time),
-		"minute": floor(fmod(current_time, 1.0) * 60.0),
-		"second": floor(fmod(current_time * 60.0, 1.0) * 60.0)
-	}
-	return datetime_dict
-
-
-func set_from_unix_timestamp(timestamp: int) -> void:
-	set_from_datetime_dict(Time.get_datetime_dict_from_unix_time(timestamp))
-
-
-func get_unix_timestamp() -> int:
-	return Time.get_unix_time_from_datetime_dict(get_datetime_dict())
-
-
-func _progress_time(delta: float) -> void:
-	if not is_zero_approx(time_cycle_duration()):
-		set_current_time(current_time + delta / time_cycle_duration() * HOURS_PER_DAY)
-
-
-func _update_time_from_os() -> void:
-	date_time_os = Time.get_datetime_dict_from_system()
-	set_time(date_time_os.hour, date_time_os.minute, date_time_os.second)
-	set_day(date_time_os.day)
-	set_month(date_time_os.month)
-	set_year(date_time_os.year)
-
-
-#####################
-## Planetary
-#####################
 
 
 func _update_celestial_coords() -> void:

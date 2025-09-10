@@ -75,7 +75,7 @@ var sky_material: ShaderMaterial
 		if sky:
 			sky.sun_light_enabled = value
 			sky.moon_light_enabled = value
-	
+
 
 ## Enables the screen space fog shader. Sky3D also works with the other two fog methods built into Godot.
 @export var fog_enabled: bool = true :
@@ -131,8 +131,8 @@ func show_sky() -> void:
 var game_date: String = "" :
 	get:
 		return tod.game_date if tod else game_date
-		
-		
+
+
 ## A readable game time string, e.g. '08:00:00'. Alias for [member TimeOfDay.game_time].
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var game_time: String = "" :
@@ -407,7 +407,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 @export_group("Weather")
 
 ## Sets the wind speed. Alias for [member SkyDome.wind_speed].
-@export_custom(PROPERTY_HINT_RANGE, "0,120,0.1,or_greater,or_less,suffix:m/s") var wind_speed: float = 1.0:
+@export_custom(PROPERTY_HINT_RANGE, "0,120,0.1,or_greater,or_less,suffix:m/s") var wind_speed: float = 1.0 :
 	set(value):
 		if sky:
 			sky.wind_speed = value
@@ -416,7 +416,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 ## Sets the wind direction. Zero means the wind is coming from the north, 90 from the east,
 ## 180 from the south and 270 (or -90) from the west. Alias for [member SkyDome.wind_direction].
-@export_custom(PROPERTY_HINT_RANGE, "-180,180,0.1,radians_as_degrees") var wind_direction: float = 0.0:
+@export_custom(PROPERTY_HINT_RANGE, "-180,180,0.1,radians_as_degrees") var wind_direction: float = 0.0 :
 	set(value):
 		if sky:
 			sky.wind_direction = value

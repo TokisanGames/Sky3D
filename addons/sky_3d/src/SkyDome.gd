@@ -52,32 +52,7 @@ func _update_ambient_color() -> void:
 func _ready() -> void:
 	set_process(false)
 	set_physics_process(false)
-	
 	build_scene()
-
-	# General
-	update_color_correction()
-	_update_ambient_color()
-	
-	# Sun and moon
-	sun_light_path = sun_light_path
-	moon_light_path = moon_light_path
-	update_moon_texture()
-
-	# Atmosphere
-	atm_wavelengths = atm_wavelengths
-	update_night_intensity()
-	update_beta_mie()
-	atm_sun_mie_anisotropy = atm_sun_mie_anisotropy
-	atm_moon_mie_intensity = atm_moon_mie_intensity
-	
-	# Fog
-	fog_atm_level_params_offset = fog_atm_level_params_offset
-	
-	
-	# Cumulus Clouds
-	cumulus_mie_anisotropy = cumulus_mie_anisotropy
-	
 	_check_cloud_processing()
 
 
@@ -111,6 +86,13 @@ func build_scene() -> void:
 	fog_mesh.custom_aabb = AABB(Vector3(-1e31, -1e31, -1e31), Vector3(2e31, 2e31, 2e31))
 	add_child(fog_mesh)
 	is_scene_built = true
+
+	# Trigger all inline setters for exported variables
+	var script: GDScript = get_script()
+	for prop in script.get_script_property_list():
+		if prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE and prop.usage & PROPERTY_USAGE_EDITOR:
+			var prop_name: String = prop.name
+			set(prop_name, get(prop_name))  # Triggers setter with current value
 
 
 #####################
@@ -234,6 +216,7 @@ func update_color_correction() -> void:
 
 var _day: bool = true
 var _sun_transform: Transform3D
+
 var sun_light_enabled: bool = true :
 	set(value):
 		sun_light_enabled = value
@@ -248,7 +231,8 @@ var sun_light_enabled: bool = true :
 func is_day() -> bool:
 	return _day
 
-## Signal when day has changed to night and vice versa.
+
+## Signals when day has changed to night and vice versa.
 func _set_day_state(v: float, threshold: float = DAY_NIGHT_TRANSITION_ANGLE) -> void:
 	if _day == true and abs(v) > threshold:
 		_day = false
@@ -256,6 +240,7 @@ func _set_day_state(v: float, threshold: float = DAY_NIGHT_TRANSITION_ANGLE) -> 
 	elif _day == false and abs(v) <= threshold:
 		_day = true
 		emit_signal("day_night_changed", _day)
+
 
 ## Updates sun position and lighting calculations
 func update_sun_coords() -> void:
@@ -393,6 +378,7 @@ func update_sun_light_energy() -> void:
 		moon_texture_alignment = value
 		update_moon_texture()
 
+
 ## Horizontally flips the moon texture
 @export var flip_moon_texture_u: bool = false :
 	set(value):
@@ -445,6 +431,7 @@ func update_moon_coords() -> void:
 	update_moon_light_energy()
 	_update_ambient_color()
 
+
 ## Applies moon texture and alignment to shader
 func update_moon_texture() -> void:
 	if is_scene_built:
@@ -484,6 +471,7 @@ func update_moon_light_color() -> void:
 	if not _moon_light_node:
 		return
 	_moon_light_node.light_color = moon_light_color
+
 
 func update_moon_light_energy() -> void:
 	if not _moon_light_node or not moon_light_enabled:
@@ -675,22 +663,24 @@ func atm_moon_phases_mult() -> float:
 		return atm_night_intensity()
 	return clampf(-_sun_transform.origin.dot(_moon_transform.origin) + 0.60, 0., 1.)
 
+
 func atm_night_intensity() -> float:
 	if not atm_enable_moon_scatter_mode:
 		return clampf(-_sun_transform.origin.y + 0.30, 0., 1.)
 	return clampf(_moon_transform.origin.y, 0., 1.) * atm_moon_phases_mult()
+
 
 func fog_atm_night_intensity() -> float:
 	if not atm_enable_moon_scatter_mode:
 		return clampf(-_sun_transform.origin.y + 0.70, 0., 1.)
 	return clampf(-_sun_transform.origin.y, 0., 1.) * atm_moon_phases_mult()
 
+
 func update_night_intensity() -> void:
 	if is_scene_built:
-		var tint: Color = atm_night_tint * atm_night_intensity()
-		sky_material.set_shader_parameter("atm_night_tint", tint)
+		sky_material.set_shader_parameter("atm_night_tint", atm_night_tint * atm_night_intensity())
 		fog_material.set_shader_parameter("atm_night_tint", atm_night_tint * fog_atm_night_intensity())
-		atm_moon_mie_intensity = atm_moon_mie_anisotropy
+
 
 func update_beta_mie() -> void:
 	if is_scene_built:

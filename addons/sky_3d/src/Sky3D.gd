@@ -431,7 +431,8 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 @export_group("Overlays")
 
 
-## Overlays a zenith aligned spherical grid. Change color in SkyDome. Alias for [member SkyDome.show_azimuthal_grid].
+## Overlays a grid aligned to the horizon and the sky zenith.
+## Change color in SkyDome. Alias for [member SkyDome.show_azimuthal_grid].
 @export var show_azimuthal_grid: bool = false :
 	set(value):
 		if sky:
@@ -440,7 +441,7 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 		return sky.show_azimuthal_grid if sky else show_azimuthal_grid
 
 
-## Overlays a zenith aligned with sky rotation. This is currently incorrect and should rotate around Polaris.
+## Overlays a grid aligned to the celestial equator and the north celestial pole (near Polaris).
 ## Change color in SkyDome. Alias for [member SkyDome.show_equatorial_grid].
 @export var show_equatorial_grid: bool = false :
 	set(value):

@@ -45,11 +45,13 @@ func _on_timeout() -> void:
 	_last_update = Time.get_ticks_msec()
 
 
+## Halts the automatic progression of in-game time until resumed.
 func pause() -> void:
 	if is_instance_valid(_update_timer):
 		_update_timer.stop()
 
 
+## Restarts the automatic progression of in-game time.
 func resume() -> void:
 	if is_instance_valid(_update_timer):
 		# Assume resuming from a pause, so timer only gets one tick
@@ -129,12 +131,15 @@ var _sky_dome: SkyDome
 
 ## Syncronize all of Sky3D with your system clock for a realtime sky, time, and date.
 @export var system_sync: bool = false
+
+## A readable game date string, eg. '2025-01-01'. Alias for [member TimeOfDay.game_date].
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var game_date: String = "" :
 	get():
 		return "%04d-%02d-%02d" % [ year, month, day ]
 
 
+## A readable game time string, e.g. '08:00:00'. Alias for [member TimeOfDay.game_time].
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var game_time: String = "" :
 	get():
@@ -196,10 +201,12 @@ var game_time: String = "" :
 			_update_celestial_coords()
 
 
+## Determines whether the current year has 366 days.
 func is_leap_year() -> bool:
 	return (year % 4 == 0) && (year % 100 != 0) || (year % 400 == 0)
 
 
+## Calculates the number of days in the current month, including adjustments for February during leap years.
 func max_days_per_month() -> int:
 	match month:
 		1, 3, 5, 7, 8, 10, 12:
@@ -214,6 +221,7 @@ func set_time(hour: int, minute: int, second: int) -> void:
 	current_time = float(hour) + float(minute) / 60.0 + float(second) / 3600.0
 
 
+## Sets the in-game date and time from a dictionary.
 func set_from_datetime_dict(datetime_dict: Dictionary) -> void:
 	year = datetime_dict.year
 	month = datetime_dict.month
@@ -221,6 +229,7 @@ func set_from_datetime_dict(datetime_dict: Dictionary) -> void:
 	set_time(datetime_dict.hour, datetime_dict.minute, datetime_dict.second)
 
 
+## Returns the current date and time as a Godot Time format compatible dictionary.
 func get_datetime_dict() -> Dictionary:
 	var datetime_dict: Dictionary = {
 		"year": year,
@@ -274,6 +283,7 @@ var _moon_orbital_elements := OrbitalElements.new()
 
 
 enum CelestialMode { SIMPLE, REALISTIC }
+## Selects between simple trigonometric approximations or full orbital mechanics for computing sun and moon positions.
 @export var celestials_calculations := CelestialMode.REALISTIC: 
 	set(value):
 		celestials_calculations = value
@@ -295,7 +305,7 @@ enum CelestialMode { SIMPLE, REALISTIC }
 		_update_celestial_coords()
 
 
-## TODO: I think this property going to be removed?
+## Specifies the time zone offset from UTC in hours to adjust local time calculations.
 @export_range(-12,14,.25) var utc: float = 7.0 :
 	set(value):
 		utc = value
@@ -310,14 +320,14 @@ enum CelestialMode { SIMPLE, REALISTIC }
 		notify_property_list_changed()
 
 
-## TODO: Tooltip
+## Toggles the calculation of sidereal time and star field rotation for realistic deep space alignments.
 @export var compute_deep_space_coords: bool = true :
 	set(value):
 		compute_deep_space_coords = value
 		_update_celestial_coords()
 
 
-## TODO: Tooltip, explain why the use would want this property
+## Offset the moon azimuth and altitude. Simple celestial calculation mode only.
 @export var moon_coords_offset: Vector2 = Vector2(0.0, 0.0) :
 	set(value):
 		moon_coords_offset = value

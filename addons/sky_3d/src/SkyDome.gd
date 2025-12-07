@@ -882,8 +882,8 @@ func _check_cloud_processing() -> void:
 ## Toggles visibility of high-altitude cirrus clouds.
 @export var cirrus_visible: bool = true :
 	set(value):
+		cirrus_visible = value
 		if is_scene_built:
-			cirrus_visible = value
 			sky_material.set_shader_parameter("cirrus_visible", value)
 			_check_cloud_processing()
 

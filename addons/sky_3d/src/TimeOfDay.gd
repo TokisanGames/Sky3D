@@ -274,7 +274,6 @@ func _update_time_from_os() -> void:
 var _sun_coords: Vector2 = Vector2.ZERO
 var _moon_coords: Vector2 = Vector2.ZERO
 var _sun_distance: float
-var _true_sun_longitude: float
 var _mean_sun_longitude: float
 var _sideral_time: float
 var _local_sideral_time: float
@@ -340,12 +339,21 @@ func get_current_time_utc0() -> float:
 
 
 func _get_time_scale() -> float:
-	return (367.0 * year - (7.0 * (year + ((month + 9.0) / 12.0))) / 4.0 +\
-		(275.0 * month) / 9.0 + day - 730530.0) + current_time / 24.0
+	# All divisions must be integer divisions, see: https://stjarnhimlen.se/comp/ppcomp.html#3
+	var leap_term: int = int(7 * int((year + int((month + 9) / 12))) / 4)
+	var century_term: int = int(3 * int((int((year + int((month - 9) / 7))) / 100) + 1) / 4)
+	var month_term: int = int(275 * month / 9)
+	var time_scale: int = 367 * year - leap_term - century_term + month_term + day - 730515
+	return time_scale + current_time / 24.0
 
 
 func _get_oblecl() -> float:
-	return deg_to_rad(23.4393 - 2.563e-7 * _get_time_scale())
+	# From: https://stjarnhimlen.se/comp/ppcomp.html#4
+	# Another quantity we will need is ecl, the obliquity of the ecliptic, 
+	# i.e. the "tilt" of the Earth's axis of rotation (currently 23.4 degrees 
+	# and slowly decreasing). First, compute the "d" of the moment of interest 
+	# (section 3). Then, compute the obliquity of the ecliptic:
+	return deg_to_rad(23.4393 - 3.563e-7 * _get_time_scale())
 
 
 func _update_celestial_coords() -> void:
@@ -416,21 +424,19 @@ func _compute_realistic_sun_coords() -> void:
 	# Distance and true anomaly
 	# Convert to distance and true anomaly(r = radians, v = degrees)
 	var r: float = sqrt(xv * xv + yv * yv)
-	var v: float = rad_to_deg(atan2(yv, xv))
+	
+	var v: float = atan2(yv, xv)
 	_sun_distance = r
 	
 	# True longitude
-	var lonSun: float = v + _sun_orbital_elements.w
-	lonSun = TOD_Math.rev(lonSun)
-	
-	var lonSunRad: float = deg_to_rad(lonSun)
-	_true_sun_longitude = lonSunRad
+	var lonSun: float = v + deg_to_rad(_sun_orbital_elements.w)
+	lonSun = fmod(lonSun + TAU, TAU)  # Wrap to [0, 2π)
 	
 	## Ecliptic and ecuatorial coords
 	
 	# Ecliptic rectangular coords
-	var xs: float = r * cos(lonSunRad)
-	var ys: float = r * sin(lonSunRad)
+	var xs: float = r * cos(lonSun)
+	var ys: float = r * sin(lonSun)
 	
 	# Ecliptic rectangular coordinates rotate these to equatorial coordinates
 	var obleclCos: float = cos(_get_oblecl())
@@ -441,31 +447,29 @@ func _compute_realistic_sun_coords() -> void:
 	var ze: float = ys * obleclSin + 0.0 * obleclCos
 	
 	# Ascencion and declination
-	var RA: float = rad_to_deg(atan2(ye, xe)) / 15  # right ascension.
+	var RA: float = atan2(ye, xe)  # right ascension.
 	var decl: float = atan2(ze, sqrt(xe * xe + ye * ye))  # declination
 	
 	# Mean longitude
-	var L: float = _sun_orbital_elements.w + _sun_orbital_elements.M
-	L = TOD_Math.rev(L)
-	
+	var L: float = deg_to_rad(_sun_orbital_elements.w + _sun_orbital_elements.M)
+	L = fmod(L + TAU, TAU)  # Wrap to [0, 2π)
 	_mean_sun_longitude = L
+	var GMST0: float = L + PI
 	
-	# Sideral time and hour angle
-	# TODO: We need to convert this math to radians
-	# TODO: 15 is degrees per hour, we will need to convert to RADIANS_PER_HOUR
-	var GMST0: float = ((L/15) + 12)
-	_sideral_time = GMST0 + get_current_time_utc0() + rad_to_deg(longitude) / 15  # +15/15
-	_local_sideral_time = deg_to_rad(_sideral_time * 15)
+	# Sidereal, see: https://stjarnhimlen.se/comp/ppcomp.html#5b
+	# Local Sidereal Time = GMST0 + UT + longitude
+	_sideral_time = GMST0 + get_current_time_utc0() * RADIANS_PER_HOUR + longitude
+	_local_sideral_time = _sideral_time
 	
-	var HA: float = (_sideral_time - RA) * 15
-	var HARAD: float = deg_to_rad(HA)
+	# Hour Angle = Sidereal Time - Right Ascension
+	# See: https://stjarnhimlen.se/comp/ppcomp.html#12b
+	var HA: float = _sideral_time - RA
 	
 	# Hour angle and declination in rectangular coords
-	# HA and Decl in rectangular coords
 	var declCos: float = cos(decl)
-	var x: float = cos(HARAD) * declCos # X Axis points to the celestial equator in the south.
-	var y: float = sin(HARAD) * declCos # Y axis points to the horizon in the west.
-	var z: float = sin(decl) # Z axis points to the north celestial pole.
+	var x: float = cos(HA) * declCos  # X Axis points to the celestial equator in the south
+	var y: float = sin(HA) * declCos  # Y axis points to the horizon in the west
+	var z: float = sin(decl)  # Z axis points to the north celestial pole
 	
 	# Rotate the rectangualar coordinates system along of the Y axis
 	var sinLat: float = sin(latitude)
@@ -475,9 +479,8 @@ func _compute_realistic_sun_coords() -> void:
 	var zhor: float = x * cosLat + z * sinLat
 	
 	# Azimuth and altitude
-	# TODO: Another likely mistake here, _sun_coords is typically in degrees, but PI is a unit in radians
 	_sun_coords.x = atan2(yhor, xhor) + PI
-	_sun_coords.y = (PI * 0.5) - asin(zhor) # atan2(zhor, sqrt(xhor * xhor + yhor * yhor))
+	_sun_coords.y = (PI * 0.5) - asin(zhor)
 
 
 func _compute_realistic_moon_coords() -> void:
@@ -492,22 +495,17 @@ func _compute_realistic_moon_coords() -> void:
 	var MRad: float = deg_to_rad(_moon_orbital_elements.M)
 	
 	# Eccentric anomaly
-	var E: float = _moon_orbital_elements.M + rad_to_deg(_moon_orbital_elements.e * sin(MRad) * (1 + _sun_orbital_elements.e * cos(MRad)))
-	
+	var E: float = _moon_orbital_elements.M + rad_to_deg(_moon_orbital_elements.e * sin(MRad) * (1 + _moon_orbital_elements.e * cos(MRad)))
 	var ERad: float = deg_to_rad(E)
 	
-	# Rectangular coords and true anomaly
-	# Rectangular coordinates of the sun in the plane of the ecliptic
+	# See: https://stjarnhimlen.se/comp/ppcomp.html#6
 	var xv: float = _moon_orbital_elements.a * (cos(ERad) - _moon_orbital_elements.e)
-	var yv: float = _moon_orbital_elements.a * (sin(ERad) * sqrt(1 - _moon_orbital_elements.e * \
-		_moon_orbital_elements.e)) * sin(ERad)
-		
+	var yv: float = _moon_orbital_elements.a * sqrt(1 - _moon_orbital_elements.e * _moon_orbital_elements.e) * sin(ERad)
+	
 	# Convert to distance and true anomaly(r = radians, v = degrees)
 	var r: float = sqrt(xv * xv + yv * yv)
-	var v: float = rad_to_deg(atan2(yv, xv))
-	v = TOD_Math.rev(v)
-	
-	var l: float = deg_to_rad(v) + _moon_orbital_elements.w
+	var v: float = atan2(yv, xv)
+	var l: float = deg_to_rad(v + deg_to_rad(_moon_orbital_elements.w))
 	
 	var cosL: float = cos(l)
 	var sinL: float = sin(l)
@@ -519,24 +517,15 @@ func _compute_realistic_moon_coords() -> void:
 	var yeclip: float = r * (sinNRad * cosL + cosNRad * sinL * cosIRad)
 	var zeclip: float = r * (sinL * sin(IRad))
 	
-	# Geocentric coords
+	# Position in space: https://stjarnhimlen.se/comp/ppcomp.html#7
 	# Geocentric position for the moon and Heliocentric position for the planets
-	var lonecl: float = rad_to_deg(atan2(yeclip, xeclip))
-	lonecl = TOD_Math.rev(lonecl)
-	
-	var latecl: float = rad_to_deg(atan2(zeclip, sqrt(xeclip * xeclip + yeclip * yeclip)))
-	
-	# Get true sun longitude
-	var lonsun: float = _true_sun_longitude
-	
-	# Ecliptic longitude and latitude in radians
-	var loneclRad: float = deg_to_rad(lonecl)
-	var lateclRad: float = deg_to_rad(latecl)
+	var lonecl: float = atan2(yeclip, xeclip)  # Ecliptic longitude
+	var latecl: float = atan2(zeclip, sqrt(xeclip * xeclip + yeclip * yeclip))  # Ecliptic latitude
 	
 	var nr: float = 1.0
-	var xh: float = nr * cos(loneclRad) * cos(lateclRad)
-	var yh: float = nr * sin(loneclRad) * cos(lateclRad)
-	var zh: float = nr * sin(lateclRad)
+	var xh: float = nr * cos(lonecl) * cos(latecl)
+	var yh: float = nr * sin(lonecl) * cos(latecl)
+	var zh: float = nr * sin(latecl)
 	
 	# Geocentric coords
 	var xs: float = 0.0
@@ -548,7 +537,7 @@ func _compute_realistic_moon_coords() -> void:
 	var zg: float = zh
 	
 	# Ecuatorial coords
-	# Cobert xg, yg un equatorial coords
+	# Convert xg, yg to equatorial coords
 	var obleclCos: float = cos(_get_oblecl())
 	var obleclSin: float = sin(_get_oblecl())
 	
@@ -557,24 +546,18 @@ func _compute_realistic_moon_coords() -> void:
 	var ze: float = yg * obleclSin + zg * obleclCos
 	
 	# Right ascention
-	var RA: float = rad_to_deg(atan2(ye, xe))
-	RA = TOD_Math.rev(RA)
-	
-	# Declination
-	var decl: float = rad_to_deg(atan2(ze, sqrt(xe * xe + ye * ye)))
-	var declRad: float = deg_to_rad(decl)
+	var RA: float = atan2(ye, xe)
+	var decl: float = atan2(ze, sqrt(xe * xe + ye * ye))
 	
 	# Sideral time and hour angle
-	var HA: float = ((_sideral_time * 15) - RA)
-	HA = TOD_Math.rev(HA)
-	var HARAD: float = deg_to_rad(HA)
+	var HA: float = ((_sideral_time) - RA)
 	
 	# HA y Decl in rectangular coordinates
-	var declCos: float = cos(declRad)
-	var xr: float = cos(HARAD) * declCos
-	var yr: float = sin(HARAD) * declCos
-	var zr: float = sin(declRad)
-	
+	var declCos: float = cos(decl)
+	var xr: float = cos(HA) * declCos
+	var yr: float = sin(HA) * declCos
+	var zr: float = sin(decl)
+
 	# Rotate the rectangualar coordinates system along of the Y axis(radians)
 	var sinLat: float = sin(latitude)
 	var cosLat: float = cos(latitude)

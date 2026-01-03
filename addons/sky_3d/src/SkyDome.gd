@@ -1070,6 +1070,22 @@ func _check_cloud_processing() -> void:
 		if is_scene_built:
 			cumulus_material.set_shader_parameter("cumulus_size", cumulus_size)
 
+@export_subgroup("Godrays")
+@export var godrays_visible: bool = true :
+	set(value):
+		godrays_visible = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("godrays_active", godrays_visible)
+@export var godrays_contrast: float = 0.75 :
+	set(value):
+		godrays_contrast = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("godrays_luminance", godrays_contrast)
+@export var godrays_darkness: float = 0.0 :
+	set(value):
+		godrays_darkness = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("godrays_darkness", godrays_darkness)
 
 #####################
 ## Stars

@@ -22,6 +22,7 @@ uniform vec3 atm_beta_ray = vec3(0.00001, 0.00001, 0.00003);
 uniform vec3 atm_beta_mie = vec3(0.00000003038); // Value computed by multiplying Mie, turbidity, and 0.000434.
 
 group_uniforms sun_disk;
+uniform vec4 sun_light_color: source_color = vec4(1.0);
 uniform vec4 sun_disk_color: source_color = vec4(0.996, 0.541, 0.14, 1.0);
 uniform float sun_disk_intensity = 2.0;
 uniform float sun_disk_size = 0.015;
@@ -71,36 +72,33 @@ at midnight. The positions of Polaris, Vega, Rigel, and Alpha Centauri confirmed
 through various sources and calculations.
 */
 
+group_uniforms clouds;
+uniform vec4 clouds_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
+
 group_uniforms cirrus_clouds;
 uniform bool cirrus_visible = true;
+uniform float cirrus_intensity = 2.0;
 uniform float cirrus_coverage = 0.5;
 uniform float cirrus_thickness = 10.0;
 uniform float cirrus_absorption = 2.0;
 uniform float cirrus_sky_tint_fade = 0.5;
-uniform float cirrus_intensity = 10.0;
 uniform float cirrus_size = 1.0;
 uniform vec2 cirrus_uv = vec2(0.16, 0.11);
 uniform vec2 cirrus_position1 = vec2(0.0);
 uniform vec2 cirrus_position2 = vec2(0.0);
-uniform vec4 cirrus_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
-uniform vec4 cirrus_horizon_light_color: source_color = vec4(0.98, 0.43, 0.15, 1.0);
-uniform vec4 cirrus_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
 uniform sampler2D cirrus_texture;
 
 group_uniforms cumulus_clouds;
 uniform bool cumulus_visible = true;
+uniform float cumulus_intensity = 0.6;
 uniform float cumulus_coverage = 0.55;
 uniform float cumulus_thickness = 0.0243;
 uniform float cumulus_absorption = 2.0;
 uniform float cumulus_noise_freq = 2.7;
 uniform float cumulus_sky_tint_fade = 0.0;
-uniform float cumulus_intensity = 1.0;
 uniform float cumulus_size = 0.5;
 uniform vec2 cumulus_position = vec2(0.0);
 uniform sampler2D cumulus_texture;
-uniform vec4 cumulus_day_color: source_color = vec4(0.824, 0.875, 1.0, 1.0);
-uniform vec4 cumulus_horizon_light_color: source_color = vec4(0.98, 0.443, 0.15, 1.0);
-uniform vec4 cumulus_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
 uniform vec3 cumulus_partial_mie_phase = vec3(0.95756, 1.04244, 0.412);
 uniform float cumulus_mie_intensity = 1.0;
 
@@ -403,8 +401,9 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	if (cirrus_visible) {
 		vec4 cirrus_clouds = render_cirrus_clouds(clouds_pos);
 		cirrus_clouds.a = clamp_to_unit(cirrus_clouds.a);
-		cirrus_clouds.rgb *= mix(mix(cirrus_day_color.rgb, cirrus_horizon_light_color.rgb, angle_mult.x), cirrus_night_color.rgb, angle_mult.w);
-
+		vec3 cloud_tint = sun_light_color.rgb;
+		cloud_tint = mix(cloud_tint, clouds_night_color.rgb, angle_mult.w);
+		cirrus_clouds.rgb *= cloud_tint * cirrus_intensity;
 		cirrus_clouds.a = mix(0.0, cirrus_clouds.a, horizonBlend);
 		col.rgb = mix(col.rgb, cirrus_clouds.rgb + mix(vec3(0.0), scatter, cirrus_sky_tint_fade), cirrus_clouds.a);
 	}
@@ -412,8 +411,9 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	if (cumulus_visible) {
 		vec4 cumulus_clouds = render_cumulus_clouds(vec3(0.0), clouds_pos, angle_mult.z, sun_pos, moon_pos);
 		cumulus_clouds.a = clamp_to_unit(cumulus_clouds.a);
-		cumulus_clouds.rgb *= mix(mix(cumulus_day_color.rgb, cumulus_horizon_light_color.rgb, angle_mult.x),
-			cumulus_night_color.rgb, angle_mult.w);
+		vec3 cloud_tint = sun_light_color.rgb;
+		cloud_tint = mix(cloud_tint, clouds_night_color.rgb, angle_mult.w);
+		cumulus_clouds.rgb *= cloud_tint * cumulus_intensity;
 		cumulus_clouds.a = mix(0.0, cumulus_clouds.a, horizonBlend);
 		col.rgb = mix(col.rgb, cumulus_clouds.rgb + mix(vec3(0.0), scatter, cumulus_sky_tint_fade), cumulus_clouds.a);
 	}

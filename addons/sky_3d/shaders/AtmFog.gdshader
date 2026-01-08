@@ -105,15 +105,14 @@ void calc_coords(vec2 uv, float depth, mat4 camMat, mat4 invProjMat,
 
 varying mat4 camera_matrix;
 varying vec4 angle_mult;
-varying flat int angle;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
-	angle = 0; //ignore; without this the line below errors in 4.3-stable
-	angle_mult.x = clamp_to_unit(1.0 - sun_direction.y);
-	angle_mult.y = clamp_to_unit(sun_direction.y + 0.45);
-	angle_mult.z = clamp_to_unit(-sun_direction.y + 0.30);
-	angle_mult.w = clamp_to_unit(-sun_direction.y + 0.60);
+	angle_mult = vec4(
+		clamp_to_unit(1.0 - sun_direction.y),
+		clamp_to_unit(sun_direction.y + 0.45),
+		clamp_to_unit(-sun_direction.y + 0.30),
+		clamp_to_unit(-sun_direction.y + 0.60));
 	camera_matrix = INV_VIEW_MATRIX;
 }
 

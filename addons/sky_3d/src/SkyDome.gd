@@ -312,6 +312,8 @@ func _update_sun_light_color() -> void:
 		return
 	var sun_light_altitude_mult: float = clampf(_sun_transform.origin.y * 2.0, 0., 1.)
 	_sun_light_node.light_color = sun_horizon_light_color.lerp(sun_light_color, sun_light_altitude_mult)
+	if is_scene_built:
+		sky_material.set_shader_parameter("sun_light_color", _sun_light_node.light_color)
 
 
 func _update_sun_light_energy() -> void:
@@ -787,6 +789,15 @@ func _update_beta_mie() -> void:
 @export_group("Clouds")
 
 
+## The night time color tint for the clouds.
+@export var clouds_night_color := Color(0.090196, 0.094118, 0.129412, 1.0) :
+	set(value):
+		clouds_night_color = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("clouds_night_color", clouds_night_color)
+			sky_material.set_shader_parameter("clouds_night_color", clouds_night_color)
+
+
 #####################
 ## Wind
 #####################
@@ -889,6 +900,14 @@ func _check_cloud_processing() -> void:
 			sky_material.set_shader_parameter("cirrus_visible", value)
 			_check_cloud_processing()
 
+## Adjusts the brightness of cirrus clouds. If covering the sky, this has a dramatic affect on lighting.
+@export_range(0.0, 16.0, 0.005) var cirrus_intensity: float = 2.0 :
+	set(value):
+		cirrus_intensity = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("cirrus_intensity", cirrus_intensity)
+
+
 
 ## Set density for cirrus clouds.
 @export var cirrus_thickness: float = 1.7 :
@@ -920,14 +939,6 @@ func _check_cloud_processing() -> void:
 		cirrus_sky_tint_fade = value
 		if is_scene_built:
 			sky_material.set_shader_parameter("cirrus_sky_tint_fade", cirrus_sky_tint_fade)
-
-
-## Adjusts the brightness of cirrus clouds. If covering the sky, this has a dramatic affect on lighting.
-@export var cirrus_intensity: float = 10.0 :
-	set(value):
-		cirrus_intensity = value
-		if is_scene_built:
-			sky_material.set_shader_parameter("cirrus_intensity", cirrus_intensity)
 
 
 ## The noise texture used for generating cirrus cloud patterns.
@@ -971,31 +982,12 @@ func _check_cloud_processing() -> void:
 			_check_cloud_processing()
 
 
-## The daytime color tint for the cumulus clouds.
-@export var cumulus_day_color := Color(0.823529, 0.87451, 1.0, 1.0) :
+## Adjusts the brightness of cumulus clouds. If covering the sky, this has a dramatic affect on lighting.
+@export_range(0, 16, 0.005) var cumulus_intensity: float = 0.6 :
 	set(value):
-		cumulus_day_color = value
+		cumulus_intensity = value
 		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_day_color", cumulus_day_color)
-			sky_material.set_shader_parameter("cumulus_day_color", cumulus_day_color)
-
-
-## The warm color tint for the cumulus clouds during sunrise and sunset.
-@export var cumulus_horizon_light_color := Color(.98, 0.43, 0.15, 1.0) :
-	set(value):
-		cumulus_horizon_light_color = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_horizon_light_color", cumulus_horizon_light_color)
-			sky_material.set_shader_parameter("cumulus_horizon_light_color", cumulus_horizon_light_color)
-
-
-## The nighttime color tint for the cumulus clouds.
-@export var cumulus_night_color := Color(0.090196, 0.094118, 0.129412, 1.0) :
-	set(value):
-		cumulus_night_color = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_night_color", cumulus_night_color)
-			sky_material.set_shader_parameter("cumulus_night_color", cumulus_night_color)
+			cumulus_material.set_shader_parameter("cumulus_intensity", cumulus_intensity)
 
 
 ## Controls the vertical depth and layering thickness of the cumulus clouds.
@@ -1028,14 +1020,6 @@ func _check_cloud_processing() -> void:
 		cumulus_noise_freq = value
 		if is_scene_built:
 			cumulus_material.set_shader_parameter("cumulus_noise_freq", cumulus_noise_freq)
-
-
-## Adjusts the brightness of cumulus clouds. If covering the sky, this has a dramatic affect on lighting.
-@export_range(0, 16, 0.005) var cumulus_intensity: float = 0.6 :
-	set(value):
-		cumulus_intensity = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_intensity", cumulus_intensity)
 
 
 ## Controls the strength of hazy light scattering around the cumulus clouds from the sun and moon, enhancing glow and diffusion near edges.

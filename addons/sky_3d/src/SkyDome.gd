@@ -20,12 +20,15 @@ const CIRRUS_TEXTURE: Texture2D = preload("res://addons/sky_3d/assets/resources/
 const CUMULUS_TEXTURE: Texture2D = preload("res://addons/sky_3d/assets/textures/noiseClouds.png")
 const SUN_MOON_CURVE: Curve = preload("res://addons/sky_3d/assets/resources/SunMoonLightFade.tres")
 const DAY_NIGHT_TRANSITION_ANGLE: float = deg_to_rad(90)  # Horizon
+const VOLUMETRIC_SHADER: String = "res://addons/sky_3d/shaders/VolumetricClouds.gdshader"
 
 var is_scene_built: bool = false
 var fog_mesh: MeshInstance3D
 var sky_material: ShaderMaterial
 var cumulus_material: Material
 var fog_material: Material
+var volumetric_mesh: MeshInstance3D
+var volumetric_material: ShaderMaterial
 
 
 #####################
@@ -86,7 +89,24 @@ func _build_scene() -> void:
 	fog_mesh.custom_aabb = AABB(Vector3(-1e31, -1e31, -1e31), Vector3(2e31, 2e31, 2e31))
 	add_child(fog_mesh)
 	is_scene_built = true
-
+	
+	# Volumetric Clouds
+	volumetric_mesh = MeshInstance3D.new()
+	volumetric_mesh.name = "_VolumetricCloudsI"
+	var vol_quad = QuadMesh.new()
+	vol_quad.size = Vector2(2.0, 2.0)
+	volumetric_mesh.mesh = vol_quad
+	volumetric_material = ShaderMaterial.new()
+	volumetric_material.shader = load(VOLUMETRIC_SHADER)
+	volumetric_material.render_priority = 98
+	volumetric_mesh.material_override = volumetric_material
+	volumetric_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	volumetric_mesh.custom_aabb = AABB(Vector3(-1e31, -1e31, -1e31), Vector3(2e31, 2e31, 2e31))
+	volumetric_mesh.visible = false
+	add_child(volumetric_mesh)
+	fog_material.set_shader_parameter("sun_direction", _sun_transform.origin)
+	volumetric_material.set_shader_parameter("sun_direction", _sun_transform.origin)
+	
 	# Trigger all inline setters for exported variables
 	var script: GDScript = get_script()
 	for prop in script.get_script_property_list():
@@ -167,6 +187,8 @@ func _update_color_correction() -> void:
 		var correction_params := Vector2(tonemap_level, exposure)
 		sky_material.set_shader_parameter("color_correction", correction_params)
 		fog_material.set_shader_parameter("color_correction", correction_params)
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("color_correction", correction_params);
 
 
 #####################
@@ -258,7 +280,9 @@ func _update_sun_coords() -> void:
 	fog_material.set_shader_parameter("sun_direction", _sun_transform.origin)
 	if _sun_light_node:
 		_sun_light_node.transform = _sun_transform
-	
+	if volumetric_material:
+		volumetric_material.set_shader_parameter("sun_direction", _sun_transform.origin)
+		
 	_set_day_state(sun_altitude)
 	_update_night_intensity()
 	_update_sun_light_color()
@@ -282,6 +306,7 @@ var _sun_light_node: DirectionalLight3D
 	set(value):
 		sun_light_color = value
 		_update_sun_light_color()
+		
 
 
 ## Color of the sun DirectionalLight3D during sunrise and sunset
@@ -312,6 +337,10 @@ func _update_sun_light_color() -> void:
 		return
 	var sun_light_altitude_mult: float = clampf(_sun_transform.origin.y * 2.0, 0., 1.)
 	_sun_light_node.light_color = sun_horizon_light_color.lerp(sun_light_color, sun_light_altitude_mult)
+	#sync volumetric cloud colors
+	if volumetric_material:
+		volumetric_material.set_shader_parameter("cloud_day_color", sun_light_color)
+		volumetric_material.set_shader_parameter("cloud_horizon_color", sun_horizon_light_color)
 	if is_scene_built:
 		sky_material.set_shader_parameter("sun_light_color", _sun_light_node.light_color)
 
@@ -425,6 +454,8 @@ func update_moon_coords() -> void:
 	var moon_basis: Basis = get_parent().moon.get_global_transform().basis.inverse()
 	sky_material.set_shader_parameter("moon_matrix", moon_basis)
 	fog_material.set_shader_parameter("moon_direction", _moon_transform.origin)
+	if volumetric_material:
+		volumetric_material.set_shader_parameter("moon_direction", _moon_transform.origin);
 	if _moon_light_node:
 		_moon_light_node.transform = _moon_transform
 	
@@ -796,6 +827,7 @@ func _update_beta_mie() -> void:
 		if is_scene_built:
 			cumulus_material.set_shader_parameter("clouds_night_color", clouds_night_color)
 			sky_material.set_shader_parameter("clouds_night_color", clouds_night_color)
+			volumetric_material.set_shader_parameter("cloud_night_color", clouds_night_color)
 
 
 #####################
@@ -873,6 +905,9 @@ enum { PHYSICS_PROCESS, PROCESS, MANUAL }
 func _check_cloud_processing() -> void:
 	var enable: bool = (cirrus_visible or cumulus_visible) and wind_speed != 0.0
 	_cloud_velocity = _cloud_direction * _cloud_speed
+	if volumetric_material:
+		volumetric_material.set_shader_parameter("wind_direction", _cloud_direction);
+		volumetric_material.set_shader_parameter("wind_speed", _cloud_speed);
 	match process_method:
 		PHYSICS_PROCESS:
 			set_physics_process(enable)
@@ -1056,6 +1091,80 @@ func _check_cloud_processing() -> void:
 		if is_scene_built:
 			cumulus_material.set_shader_parameter("cumulus_size", cumulus_size)
 
+#####################
+## Volumetric Clouds
+#####################
+
+@export_group("Volumetric Clouds")
+
+@export var volumetric_visible: bool = false:
+	set(value):
+		volumetric_visible = value
+		if volumetric_mesh:
+			volumetric_mesh.visible = value
+
+@export_subgroup("Layer")
+
+@export_range(0.01, 0.15, 0.001) var vol_cloud_bottom: float = 0.05:
+	set(value):
+		vol_cloud_bottom = value
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("cloud_bottom", value)
+
+@export_range(0.05, 0.5, 0.001) var vol_cloud_top: float = 0.4:
+	set(value):
+		vol_cloud_top = value
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("cloud_top", value)
+
+@export_subgroup("Density")
+
+@export_range(0.0, 1.0, 0.01) var vol_coverage: float = 0.45:
+	set(value):
+		vol_coverage = value
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("coverage", value)
+
+## 0 = stratus (flat), 0.5 = cumulus (puffy), 1.0 = cumulonimbus (towering)
+@export_range(0.0, 1.0, 0.01) var vol_cloud_type: float = 0.5:
+	set(value):
+		vol_cloud_type = value
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("cloud_type", value)
+
+@export_range(0.1, 3.0, 0.01) var vol_density: float = 1.0:
+	set(value):
+		vol_density = value
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("density_mult", value)
+
+@export_subgroup("Lighting")
+
+@export_range(0.01, 0.3, 0.001) var vol_absorption: float = 0.06:
+	set(value):
+		vol_absorption = value
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("absorption", value)
+
+@export_subgroup("Quality")
+
+@export_range(1.0, 30.0, 0.1) var vol_base_scale: float = 7.0:
+	set(value):
+		vol_base_scale = value
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("base_scale", value)
+
+@export_range(16, 128, 1) var vol_march_steps: int = 64:
+	set(value):
+		vol_march_steps = value
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("march_steps", value)
+
+@export_range(2, 16, 1) var vol_shadow_steps: int = 6:
+	set(value):
+		vol_shadow_steps = value
+		if volumetric_material:
+			volumetric_material.set_shader_parameter("shadow_steps", value)
 
 #####################
 ## Stars

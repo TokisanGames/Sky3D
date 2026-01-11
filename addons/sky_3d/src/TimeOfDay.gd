@@ -392,16 +392,14 @@ func _update_celestial_coords() -> void:
 
 func _compute_simple_sun_coords() -> void:
 	# PI/12.0 radians = 15 degrees => 1 hour is 15 degrees of rotation
-	var altitude: float = (get_current_time_utc0() + longitude) * RADIANS_PER_HOUR
-	# Todo: _sun_coords should be in radians
-	# As it is, _sun_coords seems to be in both radians and degrees in different places, I'm surprised it works at all!
+	var altitude: float = (get_current_time_utc0() * RADIANS_PER_HOUR) + longitude
 	_sun_coords.y = PI - altitude
 	_sun_coords.x = latitude
 
 
 func _compute_simple_moon_coords() -> void:
-	_moon_coords.y = (180.0 - _sun_coords.y) + moon_coords_offset.y
-	_moon_coords.x = (180.0 + _sun_coords.x) + moon_coords_offset.x
+	_moon_coords.y = (PI - _sun_coords.y) + moon_coords_offset.y
+	_moon_coords.x = (PI + _sun_coords.x) + moon_coords_offset.x
 
 
 func _compute_realistic_sun_coords() -> void:

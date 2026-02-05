@@ -11,9 +11,14 @@ extends Node
 
 
 signal time_changed(value)
+signal minute_changed(value)
+signal hour_changed(value) 
 signal day_changed(value)
 signal month_changed(value)
 signal year_changed(value)
+
+var _previous_minute: int = -1
+var _previous_hour: int = -1
 
 const HOURS_PER_DAY: int = 24
 const RADIANS_PER_HOUR: float = PI / 12.0
@@ -26,7 +31,10 @@ func _init() -> void:
 
 func _ready() -> void:
 	dome_path = dome_path
-
+	
+	_previous_minute = floori(fmod(current_time, 1.0) * 60.0)
+	_previous_hour = floori(current_time)
+	
 	_update_timer = Timer.new()
 	_update_timer.name = "Timer"
 	add_child(_update_timer)
@@ -159,6 +167,18 @@ var game_time: String = "" :
 				current_time += 24
 				day -= 1
 			emit_signal("time_changed", current_time)
+			
+			var new_hour: int = floori(current_time)
+			var new_minute: int = floori(fmod(current_time, 1.0) * 60.0)
+			
+			if new_hour != _previous_hour:
+				_previous_hour = new_hour
+				emit_signal("hour_changed", new_hour)
+			
+			if new_minute != _previous_minute:
+				_previous_minute = new_minute
+				emit_signal("minute_changed", new_minute)
+			
 			_update_celestial_coords()
 
 

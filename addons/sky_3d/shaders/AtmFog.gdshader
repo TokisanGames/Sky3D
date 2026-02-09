@@ -2,7 +2,7 @@
 // Copyright (c) 2021 J. Cuellar
 
 shader_type spatial;
-render_mode blend_mix, cull_disabled, unshaded;
+render_mode blend_mix, cull_front, unshaded, fog_disabled;
 
 uniform vec2 color_correction;
 
@@ -35,7 +35,6 @@ uniform vec4 atm_moon_mie_tint: source_color = vec4(.13, .18, .29, 1.);
 uniform float atm_moon_mie_intensity = .7;
 
 uniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;
-uniform sampler2D SCREEN_TEXTURE : hint_screen_texture, filter_linear_mipmap;
 
 #include "Common.gdshaderinc"
 

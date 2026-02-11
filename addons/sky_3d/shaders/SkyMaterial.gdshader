@@ -2,7 +2,7 @@
 // Copyright (c) 2021 J. Cuellar
 
 shader_type sky;
-render_mode use_debanding;
+render_mode use_debanding, use_quarter_res_pass;
 
 group_uniforms general;
 uniform bool sky_visible = true;
@@ -98,9 +98,17 @@ uniform float cumulus_noise_freq = 2.7;
 uniform float cumulus_sky_tint_fade = 0.0;
 uniform float cumulus_size = 0.5;
 uniform vec2 cumulus_position = vec2(0.0);
+uniform float cumulus_sphere_radius = 500.0;
+uniform float cumulus_sphere_height = 0.0;
 uniform sampler2D cumulus_texture;
 uniform vec3 cumulus_partial_mie_phase = vec3(0.95756, 1.04244, 0.412);
 uniform float cumulus_mie_intensity = 1.0;
+
+group_uniforms godrays;
+uniform bool godrays_active = true;
+uniform float godrays_luminance = 0.75;
+uniform float godrays_darkness = 0.0;
+
 
 group_uniforms overlays;
 uniform bool show_azimuthal_grid = false;
@@ -298,7 +306,10 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 
 	// n and tt doesnt need to be initialized since it would be set by ray_sphere_intersect
 	vec3 n; float tt;
-	if (ray_sphere_intersect(500., ro, rd, tt, n)) {
+	
+	vec3 local_ro = ro - (cumulus_sphere_height - cumulus_sphere_radius + 500.0) * vec3(0.0, 1.0, 0.0);
+	
+	if (ray_sphere_intersect(cumulus_sphere_radius, local_ro, rd, tt, n)) {
 		float march_step = float(CUMULUS_STEP) * cumulus_thickness;
 		vec3 dir_step = rd / rd.y * march_step;
 		vec3 pos = n * cumulus_size;
@@ -322,6 +333,36 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 		return vec4(ret.rgb * cumulus_intensity, a);
 	}
 	return vec4(ret.rgb * cumulus_intensity, a);
+}
+
+vec4 render_cirrus_godrays(vec3 worldPos, vec3 cloudsPos, vec3 sunPosition, vec3 moonPosition, float p_time) {
+	float dist = 5.0;
+	float accumulate = 0.0;
+	vec3 current_dir = sunPosition;
+	vec3 wind = -vec3(cumulus_position.x, 0.0, cumulus_position.y);
+	float march_step = float(CUMULUS_STEP) * cumulus_thickness;
+	if (dot(sunPosition, vec3(0.0, 1.0, 0.0)) < 0.0) {
+		current_dir = moonPosition;
+	}
+	
+	float transmittance = 1.0;
+	
+	for (int i = 0; i < 15; i++) {
+		dist += 0.2;
+		vec3 p = dist * cloudsPos;
+		float d = 0.0;
+		float light_dist = 0.0;
+		for (int l = 0; l < 7; l++) {
+			light_dist += 1.0;
+			vec3 light_p_cirrus = current_dir * light_dist * 2.0 + p;
+			float ld = calc_cirrus_density((light_p_cirrus.xz / light_p_cirrus.y) * cirrus_size) * 2.0;
+			d += ld;
+		}
+		
+		accumulate += 0.09 * clamp(exp(-d), 0.0, 1.0);
+
+	}
+	return vec4(1.0, 1.0, 1.0, accumulate);
 }
 
 // Main
@@ -417,8 +458,9 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 		cumulus_clouds.a = mix(0.0, cumulus_clouds.a, horizonBlend);
 		col.rgb = mix(col.rgb, cumulus_clouds.rgb + mix(vec3(0.0), scatter, cumulus_sky_tint_fade), cumulus_clouds.a);
 	}
-
+	
 	col.rgb = mix(col.rgb, ground_color.rgb * scatter, clamp_to_unit((-world_pos.y - atm_level_params.z) * 100.0));
+	
 	col.rgb = apply_photo_tonemap(col.rgb, color_correction.y, color_correction.x);
 	return col;
 }
@@ -497,7 +539,14 @@ void sky() {
 	if (sky_visible) {
 		col = render_sky(world_pos, clouds_pos, sun_pos, moon_pos, current_time);
 	}
-
+	if (godrays_active) {
+		if (AT_QUARTER_RES_PASS) {
+			float gr = render_cirrus_godrays(world_pos, clouds_pos, sun_pos, moon_pos, current_time).a;
+			ALPHA = gr;
+		}
+		
+		col.rgb *= mix(clamp(QUARTER_RES_COLOR.a * godrays_luminance + 0.3 - godrays_darkness, 0.5 - godrays_darkness, 2.0),1.0,1.0 - pow(abs(dot(sun_pos, vec3(0.0,1.0,0.0))), 0.3));
+	}
 	// Draw overlay grids
 	{
 		float grid_thickness = 0.0002;
@@ -514,4 +563,5 @@ void sky() {
 	}
 
 	COLOR = col.rgb;
+	
 }

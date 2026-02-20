@@ -523,7 +523,7 @@ func _compute_realistic_moon_coords() -> void:
 	# Convert to distance and true anomaly(r = radians, v = degrees)
 	var r: float = sqrt(xv * xv + yv * yv)
 	var v: float = atan2(yv, xv)
-	var l: float = deg_to_rad(v + deg_to_rad(_moon_orbital_elements.w))
+	var l: float = v + deg_to_rad(_moon_orbital_elements.w)
 	
 	var cosL: float = cos(l)
 	var sinL: float = sin(l)

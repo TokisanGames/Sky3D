@@ -389,11 +389,13 @@ func _update_celestial_coords() -> void:
 				_compute_simple_moon_coords()
 				_sky_dome.moon_altitude = _moon_coords.y
 				_sky_dome.moon_azimuth = _moon_coords.x
-			
+			# Celestial North Pole (SIMPLE convention: +Z = north)
+			_sky_dome.celestial_north_pole = Vector3(0.0, sin(latitude), cos(latitude))
+
 			if compute_deep_space_coords:
 				if _sky_dome.is_scene_built:
 					_sky_dome.sky_material.set_shader_parameter("star_tilt", HALFPI - latitude)
-		
+
 		CelestialMode.REALISTIC:
 			_compute_realistic_sun_coords()
 			_sky_dome.sun_altitude = -_sun_coords.y
@@ -402,7 +404,9 @@ func _update_celestial_coords() -> void:
 				_compute_realistic_moon_coords()
 				_sky_dome.moon_altitude = -_moon_coords.y
 				_sky_dome.moon_azimuth = -_moon_coords.x
-			
+			# Celestial North Pole (REALISTIC convention: -Z = north)
+			_sky_dome.celestial_north_pole = Vector3(0.0, sin(latitude), -cos(latitude))
+
 			if compute_deep_space_coords:
 				if _sky_dome.is_scene_built:
 					_sky_dome.sky_material.set_shader_parameter("star_tilt", latitude - HALFPI)

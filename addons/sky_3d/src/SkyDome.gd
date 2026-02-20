@@ -398,6 +398,9 @@ func _update_sun_light_energy() -> void:
 
 ## The moon's Transform3D
 var _moon_transform: Transform3D
+## Celestial North Pole direction, set by [TimeOfDay] based on observer latitude.
+## Used to derive the parallactic angle rotation for the moon texture.
+var celestial_north_pole: Vector3 = Vector3.LEFT
 ## We disable the moon DirectionalLight3D by setting [member DirectionalLight3D.shadow_enabled] 
 ## and [member DirectionalLight3D.light_energy] to false and zero respectively
 var moon_light_enabled: bool = true:
@@ -421,8 +424,14 @@ func update_moon_coords() -> void:
 	_moon_transform.origin = TOD_Math.spherical_to_cartesian(moon_altitude, moon_azimuth)
 	# Transform with Vector3.Left which puts the slight gimbal lock on the horizon. Up puts it at the zenith.
 	_moon_transform = _moon_transform.looking_at(Vector3.ZERO, Vector3.LEFT)
-	
-	var moon_basis: Basis = get_parent().moon.get_global_transform().basis.inverse()
+
+	# Moon texture basis: up axis aligns with the Celestial North Pole (parallactic angle).
+	var moon_dir: Vector3 = _moon_transform.origin.normalized()
+	var cnp: Vector3 = celestial_north_pole
+	var cnp_proj: Vector3 = cnp - moon_dir * cnp.dot(moon_dir)
+	var up: Vector3 = cnp_proj.normalized()
+	var right: Vector3 = up.cross(moon_dir)
+	var moon_basis: Basis = Basis(right, up, moon_dir).inverse()
 	sky_material.set_shader_parameter("moon_matrix", moon_basis)
 	fog_material.set_shader_parameter("moon_direction", _moon_transform.origin)
 	if _moon_light_node:

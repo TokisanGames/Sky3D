@@ -74,7 +74,7 @@ var sky_material: ShaderMaterial
 		lights_enabled = value
 		if sky:
 			sky.sun_light_enabled = value
-			sky.moon_light_enabled = value
+			sky.moon_light_enabled = moon_enabled and value
 
 
 ## Enables the screen space fog shader. Sky3D also works with the other two fog methods built into Godot.
@@ -83,6 +83,31 @@ var sky_material: ShaderMaterial
 		fog_enabled = value
 		if sky:
 			sky.fog_visible = value
+
+## Enables the Moon.
+@export var moon_enabled: bool = true :
+	set(value):
+		moon_enabled = value
+		if sky:
+			sky.moon_light_enabled = lights_enabled and value
+
+			if sky_material:
+				sky_material.set_shader_parameter("moon_visible", value)
+
+## Enabled the nearby starfield.
+@export var starfield_enabled: bool = true :
+	set(value):
+		starfield_enabled = value
+		if sky and sky_material:
+			sky_material.set_shader_parameter("starfield_visible", value)
+
+			
+## Enabled the distant starmap.
+@export var starmap_enabled: bool = true :
+	set(value):
+		starmap_enabled = value
+		if sky and sky_material:
+			sky_material.set_shader_parameter("starmap_visible", value)
 
 
 ## Disables rendering of sky, fog, and lights.

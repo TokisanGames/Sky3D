@@ -4,8 +4,10 @@
 shader_type spatial;
 render_mode blend_mix, cull_front, unshaded, fog_disabled;
 
+
 uniform vec2 color_correction;
 
+uniform float sea_level: hint_range(-2048,2048,.01) = 0.0;
 uniform float fog_density = .0001;
 uniform float fog_rayleigh_depth = .115;
 uniform float fog_mie_depth = 0.;
@@ -36,11 +38,11 @@ uniform float atm_moon_mie_intensity = .7;
 
 uniform sampler2D DEPTH_TEXTURE : hint_depth_texture, filter_linear_mipmap;
 
+varying vec4 v_angle_mult;
+
 #include "Common.gdshaderinc"
 
-
 // Atmosphere
-//------------------------------------------------------------------------------
 vec3 calc_atmospheric_scatter(float sr, float sm, vec2 mu, vec3 mult, float depth) {
 	vec3 beta_mie = atm_beta_mie;
 	vec3 beta_ray = atm_beta_ray * atm_thickness;
@@ -68,7 +70,6 @@ vec3 calc_atmospheric_scatter(float sr, float sm, vec2 mu, vec3 mult, float dept
 }
 
 // Fog
-//------------------------------------------------------------------------------
 float calc_fog_exp(float depth, float density) {
 	return 1.0 - clamp_to_unit(exp2(-depth * density));
 }
@@ -83,70 +84,78 @@ float calc_fog_distance(float depth) {
 	return clamp_to_unit(1.0 - d);
 }
 
-void calc_coords(vec2 uv, float depth, mat4 camMat, mat4 invProjMat,
-	out vec3 viewDir, out vec3 worldPos) {
-
-	vec3 ndc = vec3(uv * 2.0 - 1.0, depth);
-
-	// ViewDir
-	vec4 view = invProjMat * vec4(ndc, 1.0);
-	viewDir = view.xyz / view.w;
-
-	// worldPos
-	view = camMat * view;
-	view.xyz /= view.w;
-	view.xyz -= (camMat * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-	worldPos = view.xyz;
-}
 
 // Main
-//------------------------------------------------------------------------------
-
-varying mat4 camera_matrix;
-varying vec4 angle_mult;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
-	angle_mult = vec4(
+	v_angle_mult = vec4(
 		clamp_to_unit(1.0 - sun_direction.y),
 		clamp_to_unit(sun_direction.y + 0.45),
 		clamp_to_unit(-sun_direction.y + 0.30),
 		clamp_to_unit(-sun_direction.y + 0.60));
-	camera_matrix = INV_VIEW_MATRIX;
 }
 
 void fragment() {
-	float depthRaw = texture(DEPTH_TEXTURE, SCREEN_UV).r;
-
+	// Calculate world pixel position from depth
+	float depth_raw = texture(DEPTH_TEXTURE, SCREEN_UV).r;
 	#ifndef CURRENT_RENDERER
-	    // For 4.3 or earlier, will break if far plane is less than 1m.
-	    depthRaw = PROJECTION_MATRIX[3][2] > PROJECTION_MATRIX[2][2] ? depthRaw : depthRaw * 2.0 - 1.0;
-    #else
-	    #if CURRENT_RENDERER == RENDERER_COMPATIBILITY
-	    	depthRaw = depthRaw * 2.0 - 1.0;
-	    #endif
-    #endif
+		// For 4.3 or earlier, will break if far plane is less than 1m.
+		depth_raw = PROJECTION_MATRIX[3][2] > PROJECTION_MATRIX[2][2] ? depth_raw : depth_raw * 2.0 - 1.0;
+	#else
+		#if CURRENT_RENDERER == RENDERER_COMPATIBILITY
+			depth_raw = depth_raw * 2.0 - 1.0;
+		#endif
+	#endif
+	vec3 ndc = vec3(SCREEN_UV * 2.0 - 1.0, depth_raw);
+	vec4 clip_pos = INV_PROJECTION_MATRIX * vec4(ndc, 1.0);
+	vec3 view_pos = clip_pos.xyz / clip_pos.w;
+	vec4 world_pos_hom = INV_VIEW_MATRIX * vec4(view_pos, 1.0);
+	vec3 world_position = world_pos_hom.xyz / world_pos_hom.w;
+	
+	// Ray from camera to world intersection point
+	vec3 intersection_ray = world_position - CAMERA_POSITION_WORLD;
+	// Unit ray direction
+	vec3 ray_direction = normalize(intersection_ray);
+	//float linear_depth = -view_pos.z; // Approximate ray distance
+	//float ray_distance = length(intersection_ray); // Exact ray distance
 
-	vec3 view; vec3 worldPos;
-	calc_coords(SCREEN_UV, depthRaw, camera_matrix, INV_PROJECTION_MATRIX, view, worldPos);
-	worldPos = normalize(worldPos);
+	// Cap ray if there's a sea_level plane intersection
+	float original_distance = length(intersection_ray);
+	// Y difference from camera to sea_level
+	float dy = sea_level - CAMERA_POSITION_WORLD.y;
+	// Distance along ray to sea_level plane
+	float plane_distance = dy / (ray_direction.y + 1e-6 * sign(ray_direction.y));  // avoid divide by zero
+	float plane_hit = float(ray_direction.y < 0.) *
+					  float(plane_distance > 0.) *
+					  float(plane_distance < original_distance);
+	
+	// Use final distance or t_plane distance Final distance: mix original vs plane distance
+	float ray_distance = mix(original_distance, plane_distance, plane_hit);
+	
+	// Capped world position
+	//world_position = CAMERA_POSITION_WORLD + ray_distance * ray_direction;
 
-	float linear_depth = -view.z;
-	float fog_factor = calc_fog_exp(linear_depth, fog_density);
-	fog_factor *= calc_fog_falloff(worldPos.y, 0.0, fog_falloff);
-	fog_factor *= calc_fog_distance(linear_depth);
+	float fog_factor = calc_fog_exp(ray_distance, fog_density);
+	fog_factor *= calc_fog_falloff(ray_direction.y, 0.0, fog_falloff);
+	fog_factor *= calc_fog_distance(ray_distance);
 
-	vec2 mu = vec2(dot(sun_direction, worldPos), dot(moon_direction, worldPos));
+	vec2 mu = vec2(
+		dot(sun_direction, ray_direction),
+		dot(moon_direction, ray_direction)
+	);
 	float sr, sm;
-	calc_simple_optical_depth(worldPos.y + atm_level_params.z, sr, sm, atm_level_params.xy);
-	vec3 scatter = calc_atmospheric_scatter(sr, sm, mu.xy, angle_mult.xyz, linear_depth);
+	calc_simple_optical_depth(ray_direction.y + atm_level_params.z, sr, sm, atm_level_params.xy);
+	vec3 scatter = calc_atmospheric_scatter(sr, sm, mu, v_angle_mult.xyz, ray_distance);
 
-	vec3 tint =  scatter;
-	vec4 fog_color = vec4(tint.rgb, fog_factor);
-	fog_color = vec4((fog_color.rgb), clamp_to_unit(fog_color.a));
+	vec4 fog_color = vec4(scatter, fog_factor);
+	fog_color.a = clamp(fog_color.a, 0.0, 1.0);
 	fog_color.rgb = apply_photo_tonemap(fog_color.rgb, color_correction.y, color_correction.x);
 
 	ALBEDO = fog_color.rgb;
 	ALPHA = fog_color.a;
-	//ALPHA = (depthRaw) < 0.999999999999 ? fog_color.a: 0.0; // Exclude sky.
+
+	// View depth map
+	//ALPHA = 1.;
+	//ALBEDO = vec3(ray_distance*.0001);
 }

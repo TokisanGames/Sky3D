@@ -218,6 +218,7 @@ far = 8192.0
 
 [node name="ReflectionProbe" type="ReflectionProbe" parent="."]
 update_mode = 1
+blend_distance = 8.0
 size = Vector3(2000, 2000, 2000)
 origin_offset = Vector3(0, 5, 0)
 

@@ -709,14 +709,6 @@ func _update_beta_mie() -> void:
 			fog_mesh.visible = fog_visible
 
 
-## Applies an exponential decay to fog density along the view ray, softening the transition from clear to foggy areas—lower values create sharp cutoffs for localized mist, higher for gradual blending into the distance.
-@export_range(0.0, 50.0, .01, "or_greater") var fog_falloff: float = 3.0 :
-	set(value):
-		fog_falloff = value
-		if is_scene_built:
-			fog_material.set_shader_parameter("fog_falloff", fog_falloff)
-
-
 ## Set the fog's density
 @export_exp_easing() var fog_density: float = 0.0007 :
 	set(value):
@@ -741,6 +733,23 @@ func _update_beta_mie() -> void:
 			fog_material.set_shader_parameter("fog_end", fog_end)
 
 
+## Limits the vertical height of the fog's depth texture to avoid conflicting with depth texture
+## reads of your ocean shader. Set to the height level of your ocean. 
+@export_range(-2048.0, 2048.0) var fog_sea_level: float = 0.0 :
+	set(value):
+		fog_sea_level = value
+		if is_scene_built:
+			fog_material.set_shader_parameter("sea_level", fog_sea_level)
+
+
+## Adjusts vertical fog coverage up into the sky.
+@export_range(0.0, 50.0, .01, "or_greater") var fog_falloff: float = 3.0 :
+	set(value):
+		fog_falloff = value
+		if is_scene_built:
+			fog_material.set_shader_parameter("fog_falloff", fog_falloff)
+
+
 ## Scales the Rayleigh (blue sky) component in fog's optical depth calculation, controlling how much
 ## scattering accumulates in distant fog.
 @export_exp_easing() var fog_rayleigh_depth: float = 0.115 :
@@ -750,7 +759,7 @@ func _update_beta_mie() -> void:
 			fog_material.set_shader_parameter("fog_rayleigh_depth", fog_rayleigh_depth)
 
 
-## Adjusts the Mie (hazy around the sun/moon) depth in the fog.
+## Adjusts the Mie (haze around the sun/moon) depth in the fog.
 @export_exp_easing() var fog_mie_depth: float = 0.0001 :
 	set(value):
 		fog_mie_depth = value

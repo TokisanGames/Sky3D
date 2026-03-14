@@ -39,6 +39,7 @@ uniform vec3 moon_texture_alignment = vec3(7.0, 1.4, 4.8);
 uniform bool moon_texture_flip_u;
 uniform bool moon_texture_flip_v;
 uniform float moon_size = 0.07;
+uniform bool moon_visible = true;
 
 group_uniforms moon_mie;
 uniform vec4 atm_moon_mie_tint: source_color = vec4(0.137, 0.184, 0.292, 1.0);
@@ -54,6 +55,7 @@ uniform vec3 starmap_alignment = vec3(2.68288, -0.25891, 0.40101);
 uniform float star_rotation_offset = 9.38899;
 uniform float star_rotation = 0.0; // For simulating Earth rotation.
 uniform float star_tilt = 0.0; // For tilting the sky according to observer latitude in radians. (90° - latitude)
+uniform bool starmap_visible = true;
 
 group_uniforms star_field;
 uniform vec4 star_field_color: source_color = vec4(1.0);
@@ -61,6 +63,7 @@ uniform sampler2D star_field_texture: source_color;
 uniform float star_scintillation = 0.75;
 uniform float star_scintillation_speed = 0.01;
 uniform sampler2D noise_tex: source_color;
+uniform bool starfield_visible = true;
 
 /* Sky alignment values for a star map that is in galactic coordinates. Works for most star maps.
 X: 2.6555
@@ -303,7 +306,7 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 		vec3 dir_step = rd / rd.y * march_step;
 		vec3 pos = n * cumulus_size;
 
-		vec2 mu = vec2(dot(sun_pos, rd), dot(moon_pos, rd));
+		vec2 mu = vec2(dot(sun_pos, rd), moon_visible ? dot(moon_pos, rd) : 0.0);
 		vec3 mph = ((calc_mie_phase(mu.x, cumulus_partial_mie_phase) * atm_sun_mie_tint.rgb) +
 			calc_mie_phase(mu.y, cumulus_partial_mie_phase) * am);
 
@@ -337,7 +340,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	angle_mult.w = clamp_to_unit(-sun_pos.y + 0.60);
 
 	// Atmosphere
-	vec2 mu = vec2(dot(sun_pos, world_pos), dot(moon_pos, world_pos));
+	vec2 mu = vec2(dot(sun_pos, world_pos), moon_visible ? dot(moon_pos, world_pos) : 0.0);
 	float sr, sm;
 	calc_simple_optical_depth(world_pos.y + atm_level_params.z - horizon_offset, sr, sm, atm_level_params.xy);
 
@@ -359,8 +362,8 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 
 	float moon_ndotl = clamp(dot(moon_normal, sun_pos), 0.0, 1.0);
 	vec3 moon_tex = sample_moon_texture(moon_normal);
-	vec3 moon_output = moon_mask * moon_ndotl * exp2(1.0) * moon_tex * moon_color.rgb;
-	float moonMask = (1.0 - moon_mask);
+	vec3 moon_output = moon_visible ? moon_mask * moon_ndotl * exp2(1.0) * moon_tex * moon_color.rgb : vec3(0.0);
+	float moonMask = moon_visible ? (1.0 - moon_mask) : 1.0;
 
 	// Deep space
 
@@ -380,7 +383,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	vec2 deep_space_uv = calc_equirect_uv(normalize(final_alignment));
 
 	// Star map
-	vec3 deep_space_background = textureLod(starmap_texture, deep_space_uv, 0.0).rgb;
+	vec3 deep_space_background = starmap_visible ? textureLod(starmap_texture, deep_space_uv, 0.0).rgb : vec3(0.0);
 	deep_space_background *= starmap_color.rgb;
 	deep_space_background = adjust_contrast(deep_space_background, starmap_color.a);
 	vec3 deep_space = deep_space_background.rgb * moonMask + moon_output;
@@ -389,7 +392,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	float star_scint = textureLod(noise_tex, deep_space_uv + (p_time * star_scintillation_speed), 0.0).r;
 	star_scint = mix(1.0, star_scint * 1.5, star_scintillation);
 
-	vec3 star_field = textureLod(star_field_texture, deep_space_uv, 0.0).rgb * star_field_color.rgb;
+	vec3 star_field = starfield_visible ? textureLod(star_field_texture, deep_space_uv, 0.0).rgb * star_field_color.rgb : vec3(0.0);
 	star_field = clamp_rgb_to_unit(mix(star_field.rgb, star_field.rgb * star_scint, star_scintillation));
 	star_field = clamp_rgb_to_unit(star_field.rgb);
 	//deep_space.rgb -= clamp_to_unit(star_field.r * 10.0);

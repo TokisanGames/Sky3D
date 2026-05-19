@@ -1,4 +1,4 @@
-![image](https://github.com/TokisanGames/Sky3D/blob/main/screenshots/sky3d-800px.jpg)
+![image](https://github.com/TokisanGames/Sky3D/blob/main/screenshots/oota-windmill.jpg)
 
 
 # Sky3D
@@ -17,8 +17,8 @@ A dynamic day/night cycle for Godot Engine 4, written in GDScript.
 
 ## Screenshots
 
+![image](https://github.com/TokisanGames/Sky3D/blob/main/screenshots/sky3d.jpg)
 ![image](https://github.com/TokisanGames/Sky3D/blob/main/screenshots/oota-tree-800px.jpg)
-![image](https://github.com/TokisanGames/Sky3D/blob/main/screenshots/oota-windmill-800px.jpg)
 
 
 ## Installation

@@ -1,0 +1,12 @@
+[gd_resource type="NoiseTexture3D" format=3 uid="uid://cmraj4fdhubaq"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_cumulus3d"]
+noise_type = 0
+frequency = 0.035
+
+[resource]
+width = 128
+height = 128
+depth = 128
+noise = SubResource("FastNoiseLite_cumulus3d")
+seamless = true

@@ -17,7 +17,7 @@ const STARMAP_TEXTURE: Texture2D = preload("res://addons/sky_3d/assets/thirdpart
 const STARFIELD_TEXTURE: Texture2D = preload("res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg")
 const STARFIELD_NOISE: Texture2D = preload("res://addons/sky_3d/assets/textures/noise.jpg")
 const CIRRUS_TEXTURE: Texture2D = preload("res://addons/sky_3d/assets/resources/SNoise.tres")
-const CUMULUS_TEXTURE: Texture2D = preload("res://addons/sky_3d/assets/textures/noiseClouds.png")
+const CUMULUS_TEXTURE: Texture3D = preload("res://addons/sky_3d/assets/textures/cumulus_noise_3d.tres")
 const SUN_MOON_CURVE: Curve = preload("res://addons/sky_3d/assets/resources/SunMoonLightFade.tres")
 const DAY_NIGHT_TRANSITION_ANGLE: float = deg_to_rad(90)  # Horizon
 
@@ -1059,14 +1059,39 @@ func _check_cloud_processing() -> void:
 
 
 ## The noise texture used for generating cumulus cloud patterns.
-@export var cumulus_texture: Texture2D = CUMULUS_TEXTURE :
+@export var cumulus_texture: Texture3D = CUMULUS_TEXTURE :
 	set(value):
 		cumulus_texture = value
 		if is_scene_built:
 			cumulus_material.set_shader_parameter("cumulus_texture", cumulus_texture)
 
 
-## This parameter adjusts the scale of the noise texture, which indirectly affects the apparent height and 
+## Ray march steps at zenith (looking up). Fewer steps needed because sampling density is high.
+@export_range(4, 64) var cumulus_steps_zenith: int = 10 :
+	set(value):
+		cumulus_steps_zenith = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_steps_zenith", cumulus_steps_zenith)
+
+
+## Ray march steps at the horizon. More steps needed to compensate for stretched sampling at low angles.
+@export_range(4, 128) var cumulus_steps_horizon: int = 30 :
+	set(value):
+		cumulus_steps_horizon = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_steps_horizon", cumulus_steps_horizon)
+
+
+## Scale factor for sampling the 3D noise texture. Higher values produce smaller,
+## more numerous clouds. Lower values produce larger, fewer clouds.
+@export_range(0.05, 1.0, 0.05) var cumulus_noise_scale: float = 0.35 :
+	set(value):
+		cumulus_noise_scale = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_noise_scale", cumulus_noise_scale)
+
+
+## This parameter adjusts the scale of the noise texture, which indirectly affects the apparent height and
 ## speed of the clouds.
 @export var cumulus_size: float = 0.5 :
 	set(value):

@@ -1067,7 +1067,7 @@ func _check_cloud_processing() -> void:
 
 
 ## Ray march steps at zenith (looking up). Fewer steps needed because sampling density is high.
-@export_range(4, 64) var cumulus_steps_zenith: int = 10 :
+@export_range(4, 64) var cumulus_steps_zenith: int = 20 :
 	set(value):
 		cumulus_steps_zenith = value
 		if is_scene_built:
@@ -1075,7 +1075,7 @@ func _check_cloud_processing() -> void:
 
 
 ## Ray march steps at the horizon. More steps needed to compensate for stretched sampling at low angles.
-@export_range(4, 128) var cumulus_steps_horizon: int = 30 :
+@export_range(4, 128) var cumulus_steps_horizon: int = 25 :
 	set(value):
 		cumulus_steps_horizon = value
 		if is_scene_built:

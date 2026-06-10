@@ -98,7 +98,9 @@ uniform float cumulus_noise_freq = 2.7;
 uniform float cumulus_sky_tint_fade = 0.0;
 uniform float cumulus_size = 0.5;
 uniform vec2 cumulus_position = vec2(0.0);
-uniform sampler3D cumulus_texture;
+uniform bool cumulus_use_3d_noise = true;
+uniform sampler2D cumulus_texture_2d;
+uniform sampler3D cumulus_texture_3d;
 uniform int cumulus_steps_zenith = 10;
 uniform int cumulus_steps_horizon = 30;
 uniform float cumulus_noise_scale = 0.35;
@@ -241,7 +243,20 @@ float sample_cirrus_noise(vec2 coords) {
 }
 
 float sample_cumulus_noise(vec3 p) {
-	return textureLod(cumulus_texture, p * cumulus_noise_scale, 0.0).r;
+	if (cumulus_use_3d_noise) {
+		return textureLod(cumulus_texture_3d, p * cumulus_noise_scale, 0.0).r;
+	}
+	// Fake 3D noise: blend two 2D slices. Faster than true 3D sampling,
+	// but produces directional streaking artifacts near the zenith.
+	vec3 pos = vec3(p * 0.01);
+	pos.z *= 256.0;
+	vec2 offset = vec2(0.317, 0.123);
+	vec4 uv = vec4(0.0);
+	uv.xy = pos.xy + offset * floor(pos.z);
+	uv.zw = uv.xy + offset;
+	float x1 = textureLod(cumulus_texture_2d, uv.xy, 0.0).r;
+	float x2 = textureLod(cumulus_texture_2d, uv.zw, 0.0).r;
+	return mix(x1, x2, fract(pos.z));
 }
 
 float calc_cumulus_fbm(vec3 p, float l) {

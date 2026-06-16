@@ -98,7 +98,12 @@ uniform float cumulus_noise_freq = 2.7;
 uniform float cumulus_sky_tint_fade = 0.0;
 uniform float cumulus_size = 0.5;
 uniform vec2 cumulus_position = vec2(0.0);
-uniform sampler2D cumulus_texture;
+uniform bool cumulus_use_3d_noise = true;
+uniform sampler2D cumulus_texture_2d;
+uniform sampler3D cumulus_texture_3d;
+uniform int cumulus_steps_zenith = 20;
+uniform int cumulus_steps_horizon = 25;
+uniform float cumulus_noise_scale = 0.35;
 uniform vec3 cumulus_partial_mie_phase = vec3(0.95756, 1.04244, 0.412);
 uniform float cumulus_mie_intensity = 1.0;
 
@@ -230,7 +235,6 @@ vec3 calc_atmospheric_scatter(float sr, float sm, vec2 mu, vec3 mult) {
 
 // Clouds
 //------------------------------------------------------------------------------
-const int CUMULUS_STEP = 10;
 
 float sample_cirrus_noise(vec2 coords) {
 	float a = textureLod(cirrus_texture, coords.xy * cirrus_uv + cirrus_position1, 0.0).r;
@@ -239,14 +243,19 @@ float sample_cirrus_noise(vec2 coords) {
 }
 
 float sample_cumulus_noise(vec3 p) {
+	if (cumulus_use_3d_noise) {
+		return textureLod(cumulus_texture_3d, p * cumulus_noise_scale, 0.0).r;
+	}
+	// Fake 3D noise: blend two 2D slices. Faster than true 3D sampling,
+	// but produces directional streaking artifacts near the zenith.
 	vec3 pos = vec3(p * 0.01);
 	pos.z *= 256.0;
 	vec2 offset = vec2(0.317, 0.123);
 	vec4 uv = vec4(0.0);
 	uv.xy = pos.xy + offset * floor(pos.z);
 	uv.zw = uv.xy + offset;
-	float x1 = textureLod(cumulus_texture, uv.xy, 0.0).r;
-	float x2 = textureLod(cumulus_texture, uv.zw, 0.0).r;
+	float x1 = textureLod(cumulus_texture_2d, uv.xy, 0.0).r;
+	float x2 = textureLod(cumulus_texture_2d, uv.zw, 0.0).r;
 	return mix(x1, x2, fract(pos.z));
 }
 
@@ -299,7 +308,9 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 	// n and tt doesnt need to be initialized since it would be set by ray_sphere_intersect
 	vec3 n; float tt;
 	if (ray_sphere_intersect(500., ro, rd, tt, n)) {
-		float march_step = float(CUMULUS_STEP) * cumulus_thickness;
+		// 0°-15°: horizon steps (flat), 15°-30°: S-curve transition, 30°+: zenith steps (flat)
+		int steps = max(4, int(mix(float(cumulus_steps_horizon), float(cumulus_steps_zenith), smoothstep(0.26, 0.5, abs(rd.y)))));
+		float march_step = 100.0 * cumulus_thickness / float(steps);
 		vec3 dir_step = rd / rd.y * march_step;
 		vec3 pos = n * cumulus_size;
 
@@ -310,8 +321,8 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 		vec4 t = vec4(1.0);
 		t.rgb += (mph.rgb * cumulus_mie_intensity);
 
-		for(int i = 0; i < CUMULUS_STEP; i++) {
-			float h = float(i) * 0.1; // / float(kCLOUDS_STEP);
+		for(int i = 0; i < steps; i++) {
+			float h = float(i) / float(steps);
 			float density = calc_cumulus_density(pos, wind, h);
 			float sh = clamp_to_unit(exp(-cumulus_absorption * density * march_step));
 			t *= sh;

@@ -396,58 +396,68 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, ve
 	vec3 sun_disk = sun_enabled ? calc_disk_mask(world_pos, sun_pos, sun_disk_size) * sun_disk_color.rgb * scatter.rgb : vec3(0.0);
 	sun_disk *= sun_disk_intensity;
 
-	// Moon
-	float moon_intersect = simple_sphere_intersect(world_pos, moon_pos, moon_size);
-	float moon_mask = moon_intersect > (-1. + sqrt(moon_size)) ? 1.0 : 0.0;
-	vec3 moon_normal = normalize(world_pos * moon_intersect - moon_pos);
+	// Deep space and the moon. angle_mult.z is exactly zero whenever the sun is higher
+	// than 0.30 (~17 degrees), and every term below is multiplied by it — so in bright
+	// daylight this block computed three rotation matrices, an equirect projection and up
+	// to four texture fetches per pixel purely to multiply the result by zero. The branch
+	// is uniform (angle_mult depends only on the sun direction), so it is coherent, and
+	// the skip is bit-identical with the unguarded multiply-by-zero (skip also stops any
+	// NaN leaking out of the moon-normalize path).
+	vec3 deep_space = vec3(0.0);
+	if (angle_mult.z > 0.0) {
+		// Moon
+		float moon_intersect = simple_sphere_intersect(world_pos, moon_pos, moon_size);
+		float moon_mask = moon_intersect > (-1. + sqrt(moon_size)) ? 1.0 : 0.0;
+		vec3 moon_normal = normalize(world_pos * moon_intersect - moon_pos);
 
-	float moon_ndotl = clamp(dot(moon_normal, sun_pos), 0.0, 1.0);
-	vec3 moon_output = vec3(0.0);
-	float moonMask = 1.0;
-	if (moon_enabled) {
-		vec3 moon_tex = sample_moon_texture(moon_normal);
-		moon_output = moon_mask * moon_ndotl * exp2(1.0) * moon_tex * moon_color.rgb;
-		moonMask = (1.0 - moon_mask);
+		float moon_ndotl = clamp(dot(moon_normal, sun_pos), 0.0, 1.0);
+		vec3 moon_output = vec3(0.0);
+		float moonMask = 1.0;
+		if (moon_enabled) {
+			vec3 moon_tex = sample_moon_texture(moon_normal);
+			moon_output = moon_mask * moon_ndotl * exp2(1.0) * moon_tex * moon_color.rgb;
+			moonMask = (1.0 - moon_mask);
+		}
+
+		// Deep space
+
+		// Tilt the sky along the X-axis.
+		mat3 tilt = create_rotation_matrix(vec3(star_tilt, 0.0, 0.0));
+
+		// Rotation around Y-axis. For simulating Earth's rotation.
+		mat3 rotation = create_rotation_matrix(vec3(0.0, star_rotation + star_rotation_offset, 0.0));
+
+		// Initial XYZ rotation for alignment.
+		mat3 alignment_xyz = create_rotation_matrix(starmap_alignment);
+
+		// Combine everything together to get the desired alignment.
+		vec3 final_alignment = normalize(alignment_xyz * rotation * tilt * world_pos);
+
+		// Now generate UV coordinates for the texture.
+		vec2 deep_space_uv = calc_equirect_uv(normalize(final_alignment));
+
+		// Star map
+		vec3 deep_space_background = vec3(0.0);
+		if (starmap_enabled) {
+			deep_space_background = textureLod(starmap_texture, deep_space_uv, 0.0).rgb;
+			deep_space_background *= starmap_color.rgb;
+			deep_space_background = adjust_contrast(deep_space_background, starmap_color.a);
+		}
+		deep_space = deep_space_background.rgb * moonMask + moon_output;
+
+		// Star Field
+		vec3 star_field = vec3(0.0);
+		if (starfield_enabled) {
+			float star_scint = textureLod(noise_tex, deep_space_uv + (star_scintillation_offset * star_scintillation_speed), 0.0).r;
+			star_scint = mix(1.0, star_scint * 1.5, star_scintillation);
+			star_field = textureLod(star_field_texture, deep_space_uv, 0.0).rgb * star_field_color.rgb;
+			star_field = clamp_rgb_to_unit(mix(star_field.rgb, star_field.rgb * star_scint, star_scintillation));
+			star_field = clamp_rgb_to_unit(star_field.rgb);
+		}
+		//deep_space.rgb -= clamp_to_unit(star_field.r * 10.0);
+		deep_space.rgb += star_field.rgb * moonMask;
+		deep_space.rgb *= angle_mult.z;
 	}
-
-	// Deep space
-
-	// Tilt the sky along the X-axis.
-	mat3 tilt = create_rotation_matrix(vec3(star_tilt, 0.0, 0.0));
-
-	// Rotation around Y-axis. For simulating Earth's rotation.
-	mat3 rotation = create_rotation_matrix(vec3(0.0, star_rotation + star_rotation_offset, 0.0));
-
-	// Initial XYZ rotation for alignment.
-	mat3 alignment_xyz = create_rotation_matrix(starmap_alignment);
-
-	// Combine everything together to get the desired alignment.
-	vec3 final_alignment = normalize(alignment_xyz * rotation * tilt * world_pos);
-
-	// Now generate UV coordinates for the texture.
-	vec2 deep_space_uv = calc_equirect_uv(normalize(final_alignment));
-
-	// Star map
-	vec3 deep_space_background = vec3(0.0);
-	if (starmap_enabled) {
-		deep_space_background = textureLod(starmap_texture, deep_space_uv, 0.0).rgb;
-		deep_space_background *= starmap_color.rgb;
-		deep_space_background = adjust_contrast(deep_space_background, starmap_color.a);
-	}
-	vec3 deep_space = deep_space_background.rgb * moonMask + moon_output;
-
-	// Star Field
-	vec3 star_field = vec3(0.0);
-	if (starfield_enabled) {
-		float star_scint = textureLod(noise_tex, deep_space_uv + (star_scintillation_offset * star_scintillation_speed), 0.0).r;
-		star_scint = mix(1.0, star_scint * 1.5, star_scintillation);
-		star_field = textureLod(star_field_texture, deep_space_uv, 0.0).rgb * star_field_color.rgb;
-		star_field = clamp_rgb_to_unit(mix(star_field.rgb, star_field.rgb * star_scint, star_scintillation));
-		star_field = clamp_rgb_to_unit(star_field.rgb);
-	}
-	//deep_space.rgb -= clamp_to_unit(star_field.r * 10.0);
-	deep_space.rgb += star_field.rgb * moonMask;
-	deep_space.rgb *= angle_mult.z;
 	col.rgb += sun_disk.rgb + deep_space.rgb * horizonBlend;
 
 	// Clouds

@@ -38,7 +38,6 @@ uniform vec3 atm_sun_partial_mie_phase = vec3(0.36, 1.64, 1.6);
 group_uniforms moon;
 uniform vec4 moon_color: source_color = vec4(1.0);
 uniform sampler2D moon_texture: source_color, repeat_disable;
-uniform vec3 moon_texture_alignment = vec3(7.0, 1.4, 4.8);
 uniform bool moon_texture_flip_u;
 uniform bool moon_texture_flip_v;
 uniform float moon_size = 0.07;
@@ -54,10 +53,11 @@ uniform vec4 starmap_color: source_color = vec4(0.71, 0.71, 0.71, 0.855);
 uniform sampler2D starmap_texture: source_color;
 uniform bool starmap_flip_u = false;
 uniform bool starmap_flip_v = false;
-uniform vec3 starmap_alignment = vec3(2.68288, -0.25891, 0.40101);
-uniform float star_rotation_offset = 9.38899;
-uniform float star_rotation = 0.0; // For simulating Earth rotation.
-uniform float star_tilt = 0.0; // For tilting the sky according to observer latitude in radians. (90° - latitude)
+// alignment * rotation * tilt, composed on the CPU in SkyDome. These are frame constants;
+// building them per pixel cost 3 create_rotation_matrix() calls (18 sin/cos) plus 4 mat3
+// products for every sky pixel. The authoring properties (starmap_alignment,
+// star_rotation_offset, observer latitude, sidereal time) still live in GDScript.
+uniform mat3 starmap_matrix = mat3(1.0);
 uniform bool starmap_enabled = true;
 
 group_uniforms star_field;
@@ -123,6 +123,10 @@ uniform float azimuthal_grid_rotation_offset = 0.03;
 uniform bool show_equatorial_grid = false;
 uniform vec4 equatorial_grid_color : source_color = vec4(0., .75, 1., 1.);
 uniform float equatorial_grid_rotation_offset = 0.03;
+// Also frame constants, composed on the CPU from the star map's tilt and rotation. Only
+// consumed by the equatorial grid.
+uniform vec3 grid_north_celestial_pole = vec3(0.0, 1.0, 0.0);
+uniform float grid_rotation_angle = 0.0;
 
 group_uniforms transform_matrices;
 uniform mat3 moon_matrix; // Calculated externally via GDScript.
@@ -165,7 +169,7 @@ vec2 calc_equirect_uv(vec3 norm) {
 }
 
 vec3 sample_moon_texture(vec3 dir) {
-	dir = moon_matrix * dir * create_rotation_matrix(moon_texture_alignment);
+	dir = moon_matrix * dir; // texture alignment is folded into moon_matrix on the CPU
 	dir.x = -dir.x;
 	dir.z = -dir.z;
 	float flipu = moon_texture_flip_u ? 1.0 : -1.0;
@@ -419,22 +423,9 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, ve
 			moonMask = (1.0 - moon_mask);
 		}
 
-		// Deep space
-
-		// Tilt the sky along the X-axis.
-		mat3 tilt = create_rotation_matrix(vec3(star_tilt, 0.0, 0.0));
-
-		// Rotation around Y-axis. For simulating Earth's rotation.
-		mat3 rotation = create_rotation_matrix(vec3(0.0, star_rotation + star_rotation_offset, 0.0));
-
-		// Initial XYZ rotation for alignment.
-		mat3 alignment_xyz = create_rotation_matrix(starmap_alignment);
-
-		// Combine everything together to get the desired alignment.
-		vec3 final_alignment = normalize(alignment_xyz * rotation * tilt * world_pos);
-
-		// Now generate UV coordinates for the texture.
-		vec2 deep_space_uv = calc_equirect_uv(normalize(final_alignment));
+		// Deep space. starmap_matrix is alignment * rotation * tilt, composed on the CPU once
+		// per update instead of three create_rotation_matrix() calls per pixel.
+		vec2 deep_space_uv = calc_equirect_uv(normalize(starmap_matrix * world_pos));
 
 		// Star map
 		vec3 deep_space_background = vec3(0.0);
@@ -643,13 +634,11 @@ void sky() {
 			float grid_thickness = 0.0002;
 			float grid_spacing = 0.261799; // 15 degrees
 			vec3 zenith_dir = vec3(0.0, 1.0, 0.0); // Y-axis aligned azimuthal
-			vec3 north_celestial_pole = create_rotation_matrix(vec3(star_tilt, 0.0, 0.0)) * zenith_dir;
-			float rotation_angle = star_rotation + star_rotation_offset;
 			if (show_azimuthal_grid) {
 				render_grid(EYEDIR, zenith_dir, azimuthal_grid_rotation_offset, azimuthal_grid_color, grid_spacing, grid_thickness, col);
 			}
 			if (show_equatorial_grid) {
-				render_grid(EYEDIR, north_celestial_pole, rotation_angle + equatorial_grid_rotation_offset, equatorial_grid_color, grid_spacing, grid_thickness, col);
+				render_grid(EYEDIR, grid_north_celestial_pole, grid_rotation_angle + equatorial_grid_rotation_offset, equatorial_grid_color, grid_spacing, grid_thickness, col);
 			}
 		}
 	}

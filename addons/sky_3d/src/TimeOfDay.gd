@@ -63,7 +63,7 @@ func pause() -> void:
 func resume() -> void:
 	if is_instance_valid(_update_timer):
 		# Assume resuming from a pause, so timer only gets one tick
-		_last_update = Time.get_ticks_msec() - update_interval
+		_last_update = Time.get_ticks_msec() - int(update_interval * 1000.0)
 		if (Engine.is_editor_hint() and editor_time_enabled) or \
 				(not Engine.is_editor_hint() and game_time_enabled):
 			_update_timer.start()

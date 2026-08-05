@@ -888,10 +888,13 @@ const WIND_SPEED_FACTOR: float = 0.01
 ## Sets the wind speed.
 @export_custom(PROPERTY_HINT_RANGE, "0,120,0.1,or_greater,or_less,suffix:m/s") var wind_speed: float = 1.0 :
 	set(value):
+		if is_equal_approx(wind_speed, value):
+			return
+		wind_speed = value
 		_cloud_speed = value * WIND_SPEED_FACTOR
 		_check_cloud_processing()
 	get:
-		return _cloud_speed / WIND_SPEED_FACTOR
+		return wind_speed
 
 
 # Zero degrees means the wind is coming from the north, but the shader uses the +X axis as zero, so

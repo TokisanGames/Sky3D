@@ -108,7 +108,9 @@ func _build_scene() -> void:
 	# Non-editor state set before the scene built (eg. Sky3D.sky_enabled at load)
 	sky_material.set_shader_parameter("sky_enabled", sky_enabled)
 	sky_material.set_shader_parameter("star_scintillation_offset", _scint_offset)
+	sky_material.set_shader_parameter("clouds_in_reflections", clouds_in_reflections)
 	_update_fog_celestial_visibility()
+	_apply_quarter_res_mode()
 
 
 #####################
@@ -866,6 +868,18 @@ func _update_fog_celestial_visibility() -> void:
 			sky_material.set_shader_parameter("clouds_night_color", clouds_night_color)
 
 
+## Keeps the full sky — clouds marched inline exactly as before the subpass split, plus the
+## star map and the moon — in the radiance cubemap that feeds ambient light and reflections.
+## Turning this off renders a low-frequency atmosphere only (Horizon3D's default): cheaper
+## radiance regeneration in live scenes, but clouds, stars, and the moon vanish from
+## reflections.
+@export var clouds_in_reflections: bool = true :
+	set(value):
+		clouds_in_reflections = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("clouds_in_reflections", value)
+
+
 #####################
 ## Wind
 #####################
@@ -958,6 +972,29 @@ func _update_processing() -> void:
 		MANUAL, _:
 			set_physics_process(false)
 			set_process(false)
+
+
+## Pushes the quarter-res preference to the shader.
+##
+## Which renderers can honor it is decided here, not in the shader: only Forward+ and Mobile
+## run the quarter-res sky subpass. Compatibility never fills the quarter-res buffer — the
+## engine reports QUARTER_RES_COLOR as opaque black there, which blended at alpha 1 would
+## blank the whole sky — so the effective uniform is the preference ANDed with renderer
+## support. On Compatibility clouds march in the main pass at full resolution, as before the
+## subpass split. This stays a uniform-only push: no runtime shader variants, and nothing
+## here mutates the scene's Sky material.
+##
+## Renderer-support note: the QUARTER_RES_COLOR read compiles on every renderer only from
+## Godot 4.7 (upstream 7282051 fixed the GLES3 sky template's undefined sampler macros).
+## Inside this version range the uniform gate is all that is needed; shipping support for
+## Compatibility on older Godot is handled by matching split shaders (see performance-clouds
+## branch / SkyDome's variant assignment there).
+func _apply_quarter_res_mode() -> void:
+	if not is_scene_built:
+		return
+	var method: String = RenderingServer.get_current_rendering_method()
+	var supported: bool = method == "forward_plus" or method == "mobile"
+	sky_material.set_shader_parameter("cumulus_quarter_res", cumulus_quarter_res and supported)
 
 
 #####################
@@ -1055,6 +1092,17 @@ func _update_processing() -> void:
 		if is_scene_built:
 			sky_material.set_shader_parameter("cumulus_enabled", value)
 			_update_processing()
+
+
+## Moves the cumulus raymarch into Godot's quarter-resolution sky subpass — 1/16th the pixels
+## for the same march. Forward+ and Mobile only; Compatibility falls back to marching at full
+## resolution in the main pass. Note: with this on and [member clouds_in_reflections] off,
+## clouds are no longer marched into the radiance cubemap, so they vanish from reflections
+## (ambient/reflections are low-frequency).
+@export var cumulus_quarter_res: bool = true :
+	set(value):
+		cumulus_quarter_res = value
+		_apply_quarter_res_mode()
 
 
 ## Generates cumulus cloud patterns using the 3D noise texture if enabled, otherwise the 2D textures.

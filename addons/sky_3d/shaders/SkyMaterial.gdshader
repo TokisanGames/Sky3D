@@ -2,7 +2,8 @@
 // Copyright (c) 2021 J. Cuellar
 
 shader_type sky;
-render_mode use_debanding;
+render_mode use_debanding, use_quarter_res_pass;
+
 
 group_uniforms general;
 uniform bool sky_enabled = true;
@@ -110,6 +111,8 @@ uniform float cumulus_absorption = 2.0;
 uniform float cumulus_mie_intensity = 1.0;
 uniform vec3 cumulus_partial_mie_phase = vec3(0.95756, 1.04244, 0.412);
 uniform float cumulus_sky_tint_fade = 0.0;
+uniform bool cumulus_quarter_res = true;
+uniform bool clouds_in_reflections = true;
 uniform vec2 cumulus_position = vec2(0.0);
 
 group_uniforms overlays;
@@ -342,10 +345,32 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 	return vec4(ret.rgb * cumulus_intensity, a);
 }
 
+// Cumulus only, evaluated in the quarter-resolution subpass — 1/16th the pixels for the same
+// raymarch. Returns straight (non-premultiplied) color with coverage in alpha, matching the
+// mix() the full-resolution pass performs.
+vec4 render_cumulus_layer(vec3 dir) {
+	vec3 sun_pos = LIGHT0_DIRECTION;
+	vec3 moon_pos = LIGHT1_DIRECTION;
+	vec4 angle_mult;
+	angle_mult.x = clamp_to_unit(1.0 - sun_pos.y);
+	angle_mult.y = clamp_to_unit(sun_pos.y + 0.45);
+	angle_mult.z = clamp_to_unit(-sun_pos.y + 0.30);
+	angle_mult.w = clamp_to_unit(-sun_pos.y + 0.60);
+
+	vec4 c = render_cumulus_clouds(vec3(0.0), dir, angle_mult.z, sun_pos, moon_pos);
+	c.a = clamp_to_unit(c.a);
+	vec3 cloud_tint = sun_light_color.rgb;
+	cloud_tint = mix(cloud_tint, clouds_night_color.rgb, angle_mult.w);
+	c.rgb *= cloud_tint * cumulus_intensity;
+	// Matches the full-res horizon blend: world_pos.y after horizon_offset is applied.
+	c.a = mix(0.0, c.a, clamp_to_unit((dir.y - horizon_offset - 0.03) * 3.0));
+	return c;
+}
+
 // Main
 //------------------------------------------------------------------------------
 
-vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos) {
+vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, vec4 cumulus) {
 	vec3 col = vec3(0.0);
 
 	vec4 angle_mult;
@@ -436,18 +461,43 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos) {
 	}
 
 	if (cumulus_enabled) {
-		vec4 cumulus_clouds = render_cumulus_clouds(vec3(0.0), clouds_pos, angle_mult.z, sun_pos, moon_pos);
-		cumulus_clouds.a = clamp_to_unit(cumulus_clouds.a);
-		vec3 cloud_tint = sun_light_color.rgb;
-		cloud_tint = mix(cloud_tint, clouds_night_color.rgb, angle_mult.w);
-		cumulus_clouds.rgb *= cloud_tint * cumulus_intensity;
-		cumulus_clouds.a = mix(0.0, cumulus_clouds.a, horizonBlend);
-		col.rgb = mix(col.rgb, cumulus_clouds.rgb + mix(vec3(0.0), scatter, cumulus_sky_tint_fade), cumulus_clouds.a);
+		// Cumulus, composited from the quarter-res subpass (or marched inline by sky() on
+		// renderers without it). Tint and horizon blend were already applied there; only the
+		// sky-tint term needs this pixel's full-res scatter.
+		col.rgb = mix(col.rgb, cumulus.rgb + mix(vec3(0.0), scatter, cumulus_sky_tint_fade), cumulus.a);
 	}
 
 	col.rgb = mix(col.rgb, ground_color.rgb * scatter, clamp_to_unit((-world_pos.y - atm_level_params.z) * 100.0));
 	col.rgb = apply_photo_tonemap(col.rgb, color_correction.y, color_correction.x);
 	return col;
+}
+
+// Low-frequency atmosphere only: scattering, sun disk, ground. No clouds, moon, star map or
+// grids. This is what the radiance cubemap renders — ambient irradiance and reflections are
+// inherently low-frequency, so the cloud raymarch and the star map fetches buy nothing there.
+vec3 render_atmosphere(vec3 world_pos, vec3 sun_pos, vec3 moon_pos) {
+	vec4 angle_mult;
+	angle_mult.x = clamp_to_unit(1.0 - sun_pos.y);
+	angle_mult.y = clamp_to_unit(sun_pos.y + 0.45);
+	angle_mult.z = clamp_to_unit(-sun_pos.y + 0.30);
+	angle_mult.w = clamp_to_unit(-sun_pos.y + 0.60);
+
+	// Atmosphere
+	vec2 mu = vec2(sun_enabled ? dot(sun_pos, world_pos) : 0.0, moon_enabled ? dot(moon_pos, world_pos) : 0.0);
+	float sr, sm;
+	calc_simple_optical_depth(world_pos.y + atm_level_params.z - horizon_offset, sr, sm, atm_level_params.xy);
+
+	world_pos.y -= horizon_offset;
+
+	vec3 scatter = calc_atmospheric_scatter(sr, sm, mu.xy, angle_mult.xyz);
+	vec3 col = scatter.rgb;
+
+	// Sun
+	vec3 sun_disk = sun_enabled ? calc_disk_mask(world_pos, sun_pos, sun_disk_size) * sun_disk_color.rgb * scatter.rgb : vec3(0.0);
+	col.rgb += sun_disk.rgb * sun_disk_intensity;
+
+	col.rgb = mix(col.rgb, ground_color.rgb * scatter, clamp_to_unit((-world_pos.y - atm_level_params.z) * 100.0));
+	return apply_photo_tonemap(col.rgb, color_correction.y, color_correction.x);
 }
 
 vec4 create_axis_angle_quat(vec3 axis, float angle) {
@@ -514,30 +564,84 @@ void render_grid(vec3 dir, vec3 pole_dir, float rotation_angle, vec4 line_color,
 }
 
 void sky() {
-	vec3 col = vec3(0.0); // Set up the initial sky color which will be added to later to produce the final result.
-	vec3 world_pos = EYEDIR; // Original shader set this up in the vertex() function. For sky shaders the overall equivalent is EYEDIR.
-	vec3 clouds_pos = EYEDIR; // The same is used for cloud rendering.
 	vec3 sun_pos = LIGHT0_DIRECTION; // Redefined from now-deprecated _sun_direction.
 	vec3 moon_pos = LIGHT1_DIRECTION; // Redefined from now-deprecated _moon_direction.
 
-	if (sky_enabled) {
-		col = render_sky(world_pos, clouds_pos, sun_pos, moon_pos);
+	vec3 col = vec3(0.0);
+	float alpha = 1.0;
+
+	// NOTE: no early `return` anywhere in this function — Godot rejects `return` in the sky()
+	// processor function ("Using 'return' in the 'sky' processor function is incorrect").
+	//
+	// The reflection capture runs the subpasses too — the engine builds dedicated
+	// SKY_VERSION_OCTMAP_HALF_RES / _QUARTER_RES variants — so AT_CUBEMAP_PASS and
+	// AT_QUARTER_RES_PASS can both be true on the same invocation. The quarter-res branch is
+	// tested FIRST so clouds are excluded from the reflection entirely rather than marched
+	// into it.
+	if (AT_QUARTER_RES_PASS) {
+		if (!AT_CUBEMAP_PASS && sky_enabled && cumulus_enabled && cumulus_quarter_res) {
+			vec4 c = render_cumulus_layer(EYEDIR);
+			col = c.rgb;
+			alpha = c.a;
+		} else {
+			alpha = 0.0;
+		}
+	} else if (AT_CUBEMAP_PASS) {
+		if (sky_enabled) {
+			// With clouds_in_reflections the cubemap renders the full sky — clouds marched
+			// inline exactly as they were before the subpass split, stars and the moon
+			// included. Without it, a low-frequency atmosphere only: cheaper, but clouds,
+			// stars and the moon vanish from reflections.
+			if (clouds_in_reflections) {
+				vec4 cumulus = vec4(0.0);
+				if (cumulus_enabled) {
+					cumulus = render_cumulus_layer(EYEDIR);
+				}
+				col = render_sky(EYEDIR, EYEDIR, sun_pos, moon_pos, cumulus);
+			} else {
+				col = render_atmosphere(EYEDIR, sun_pos, moon_pos);
+			}
+		}
+	} else {
+		if (sky_enabled) {
+			// On Forward+ and Mobile the engine fills QUARTER_RES_COLOR in the quarter-res sky
+			// subpass and this pass just samples it — 1/16th the march pixels for the same
+			// clouds. Compatibility never runs the subpass (buffer stays black, so blended at
+			// alpha 1 it would blank the sky), which the dome handles by forcing the
+			// cumulus_quarter_res uniform off on GLES3: the branch below is never taken and
+			// clouds march here at full resolution, as before the subpass split.
+			// NOTE: the read below compiles only where the GLES3 sky template is fixed —
+			// Godot 4.7 and up (7282051). On 4.x Compatibility builds before 4.7 the whole
+			// shader fails to compile; see SkyDome._apply_quarter_res_mode.
+			vec4 cumulus = vec4(0.0);
+			if (cumulus_enabled) {
+				if (cumulus_quarter_res) {
+					cumulus = QUARTER_RES_COLOR;
+				} else {
+					cumulus = render_cumulus_layer(EYEDIR);
+				}
+			}
+			// EYEDIR is passed twice: the original shader tracked world position and cloud
+			// position separately, and they have been identical since the port to a sky shader.
+			col = render_sky(EYEDIR, EYEDIR, sun_pos, moon_pos, cumulus);
+		}
+
+		// Draw overlay grids
+		{
+			float grid_thickness = 0.0002;
+			float grid_spacing = 0.261799; // 15 degrees
+			vec3 zenith_dir = vec3(0.0, 1.0, 0.0); // Y-axis aligned azimuthal
+			vec3 north_celestial_pole = create_rotation_matrix(vec3(star_tilt, 0.0, 0.0)) * zenith_dir;
+			float rotation_angle = star_rotation + star_rotation_offset;
+			if (show_azimuthal_grid) {
+				render_grid(EYEDIR, zenith_dir, azimuthal_grid_rotation_offset, azimuthal_grid_color, grid_spacing, grid_thickness, col);
+			}
+			if (show_equatorial_grid) {
+				render_grid(EYEDIR, north_celestial_pole, rotation_angle + equatorial_grid_rotation_offset, equatorial_grid_color, grid_spacing, grid_thickness, col);
+			}
+		}
 	}
 
-	// Draw overlay grids
-	{
-		float grid_thickness = 0.0002;
-		float grid_spacing = 0.261799; // 15 degrees
-		vec3 zenith_dir = vec3(0.0, 1.0, 0.0); // Y-axis aligned azimuthal
-		vec3 north_celestial_pole = create_rotation_matrix(vec3(star_tilt, 0.0, 0.0)) * zenith_dir;
-		float rotation_angle = star_rotation + star_rotation_offset;
-		if (show_azimuthal_grid) {
-			render_grid(EYEDIR, zenith_dir, azimuthal_grid_rotation_offset, azimuthal_grid_color, grid_spacing, grid_thickness, col);
-		}
-		if (show_equatorial_grid) {
-			render_grid(EYEDIR, north_celestial_pole, rotation_angle + equatorial_grid_rotation_offset, equatorial_grid_color, grid_spacing, grid_thickness, col);
-		}
-	}
-
-	COLOR = col.rgb;
+	COLOR = col;
+	ALPHA = alpha;
 }

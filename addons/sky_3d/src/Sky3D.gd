@@ -487,6 +487,18 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 			environment.sky.radiance_size = value
 
 
+## Includes clouds in the radiance cubemap used for reflections. With it off, the cubemap
+## renders a low-frequency atmosphere only: cheaper in live scenes, but clouds vanish from
+## reflections. Alias for [member SkyDome.clouds_in_reflections].
+@export var clouds_in_reflections: bool = true :
+	set(value):
+		clouds_in_reflections = value
+		if sky:
+			sky.clouds_in_reflections = value
+	get:
+		return sky.clouds_in_reflections if sky else clouds_in_reflections
+
+
 #####################
 ## Overlays
 #####################
@@ -604,6 +616,7 @@ func _initialize() -> void:
 	sun_enabled = sun_enabled
 	moon_enabled = moon_enabled
 	stars_enabled = stars_enabled
+	clouds_in_reflections = clouds_in_reflections
 
 
 func _enter_tree() -> void:

@@ -63,7 +63,7 @@ func _ready() -> void:
 	set_process(false)
 	set_physics_process(false)
 	_build_scene()
-	_check_cloud_processing()
+	_update_processing()
 
 
 func _build_scene() -> void:
@@ -107,6 +107,7 @@ func _build_scene() -> void:
 
 	# Non-editor state set before the scene built (eg. Sky3D.sky_enabled at load)
 	sky_material.set_shader_parameter("sky_enabled", sky_enabled)
+	sky_material.set_shader_parameter("star_scintillation_offset", _scint_offset)
 	_update_fog_celestial_visibility()
 
 
@@ -126,6 +127,7 @@ func _process(delta: float) -> void:
 ## If [method process_method] is set to manual, this function can be called with the number of 
 ## seconds passed to update the position of the clouds.
 func process_tick(delta: float) -> void:
+	_advance_scintillation(delta)
 	if not is_scene_built or not (cirrus_enabled or cumulus_enabled):
 		return
 	var position_delta: Vector2 = _cloud_velocity * delta
@@ -138,6 +140,20 @@ func process_tick(delta: float) -> void:
 		_cirrus_position2 = (_cirrus_position2 + position_delta).posmod(1.0)
 		sky_material.set_shader_parameter("cirrus_position1", _cirrus_position1)
 		sky_material.set_shader_parameter("cirrus_position2", _cirrus_position2)
+
+
+## Advances star scintillation. The sky shader no longer reads TIME, which forced
+## Godot's most expensive continuous radiance processing; the offset is advanced here instead.
+## Writes nothing during the day, when the star field is not visible.
+func _advance_scintillation(delta: float) -> void:
+	if not is_scene_built or is_day():
+		return
+	if is_zero_approx(star_scintillation) or is_zero_approx(star_scintillation_speed):
+		return
+	# Wrapped to keep UV precision bounded. The TIME-driven version grew without limit and
+	# lost precision over a long session.
+	_scint_offset = fmod(_scint_offset + delta * star_scintillation_speed, 1.0)
+	sky_material.set_shader_parameter("star_scintillation_offset", _scint_offset)
 
 
 #####################
@@ -876,7 +892,7 @@ const WIND_SPEED_FACTOR: float = 0.01
 			return
 		wind_speed = value
 		_cloud_speed = value * WIND_SPEED_FACTOR
-		_check_cloud_processing()
+		_update_processing()
 	get:
 		return wind_speed
 
@@ -894,7 +910,7 @@ const WIND_DIRECTION_OFFSET: float = deg_to_rad(-90)
 		# That would otherwise happen with a non-zero WIND_DIRECTION_OFFSET on either end of the
 		# slider (depending on the sign of that offset). We hold on to it here make sure the
 		# slider stays at the same edge. See also the 'get' function below.
-		_check_cloud_processing()
+		_update_processing()
 	get:
 		# We fetch the real wind direction by taking the angle from the clouds direction
 		# vector and correcting it for the offset again.
@@ -922,11 +938,15 @@ enum { PHYSICS_PROCESS, PROCESS, MANUAL }
 @export_enum("Physics Process", "Process", "Manual") var process_method: int = PHYSICS_PROCESS :
 	set(value):
 		process_method = value
-		_check_cloud_processing()
+		_update_processing()
 
 
-func _check_cloud_processing() -> void:
-	var enable: bool = is_scene_built and (cirrus_enabled or cumulus_enabled) and wind_speed != 0.0
+func _update_processing() -> void:
+	# Cloud drift only runs when there is wind; star scintillation keeps processing alive on its
+	# own, so zero-wind scenes still animate their stars at night.
+	var enable: bool = is_scene_built and (
+			(cirrus_enabled or cumulus_enabled) and wind_speed != 0.0
+			or (star_scintillation != 0.0 and star_scintillation_speed != 0.0))
 	_cloud_velocity = _cloud_direction * _cloud_speed
 	match process_method:
 		PHYSICS_PROCESS:
@@ -953,7 +973,7 @@ func _check_cloud_processing() -> void:
 		cirrus_enabled = value
 		if is_scene_built:
 			sky_material.set_shader_parameter("cirrus_enabled", value)
-			_check_cloud_processing()
+			_update_processing()
 
 
 ## How much of the sky is covered by cirrus clouds.
@@ -1034,7 +1054,7 @@ func _check_cloud_processing() -> void:
 		cumulus_enabled = value
 		if is_scene_built:
 			sky_material.set_shader_parameter("cumulus_enabled", value)
-			_check_cloud_processing()
+			_update_processing()
 
 
 ## Generates cumulus cloud patterns using the 3D noise texture if enabled, otherwise the 2D textures.
@@ -1182,6 +1202,9 @@ func _check_cloud_processing() -> void:
 #####################
 
 @export_group("Stars")
+
+## CPU based offset feeding the shader's [member star_scintillation_speed]. Advanced at night only, in [method process_tick].
+var _scint_offset: float = 0.0
 
 
 ## Shows the distant star map (galaxy, nebulas).

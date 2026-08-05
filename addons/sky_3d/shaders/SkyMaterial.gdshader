@@ -63,6 +63,7 @@ uniform vec4 star_field_color: source_color = vec4(1.0);
 uniform sampler2D star_field_texture: source_color;
 uniform float star_scintillation = 0.75;
 uniform float star_scintillation_speed = 0.01;
+uniform float star_scintillation_offset = 0.0;
 uniform sampler2D noise_tex: source_color;
 uniform bool starfield_enabled = true;
 
@@ -344,7 +345,7 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 // Main
 //------------------------------------------------------------------------------
 
-vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, float p_time) {
+vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos) {
 	vec3 col = vec3(0.0);
 
 	vec4 angle_mult;
@@ -412,7 +413,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	// Star Field
 	vec3 star_field = vec3(0.0);
 	if (starfield_enabled) {
-		float star_scint = textureLod(noise_tex, deep_space_uv + (p_time * star_scintillation_speed), 0.0).r;
+		float star_scint = textureLod(noise_tex, deep_space_uv + (star_scintillation_offset * star_scintillation_speed), 0.0).r;
 		star_scint = mix(1.0, star_scint * 1.5, star_scintillation);
 		star_field = textureLod(star_field_texture, deep_space_uv, 0.0).rgb * star_field_color.rgb;
 		star_field = clamp_rgb_to_unit(mix(star_field.rgb, star_field.rgb * star_scint, star_scintillation));
@@ -513,7 +514,6 @@ void render_grid(vec3 dir, vec3 pole_dir, float rotation_angle, vec4 line_color,
 }
 
 void sky() {
-	float current_time = TIME;
 	vec3 col = vec3(0.0); // Set up the initial sky color which will be added to later to produce the final result.
 	vec3 world_pos = EYEDIR; // Original shader set this up in the vertex() function. For sky shaders the overall equivalent is EYEDIR.
 	vec3 clouds_pos = EYEDIR; // The same is used for cloud rendering.
@@ -521,7 +521,7 @@ void sky() {
 	vec3 moon_pos = LIGHT1_DIRECTION; // Redefined from now-deprecated _moon_direction.
 
 	if (sky_enabled) {
-		col = render_sky(world_pos, clouds_pos, sun_pos, moon_pos, current_time);
+		col = render_sky(world_pos, clouds_pos, sun_pos, moon_pos);
 	}
 
 	// Draw overlay grids

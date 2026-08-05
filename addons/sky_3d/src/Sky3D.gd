@@ -453,6 +453,38 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 			sky.wind_direction = value
 	get:
 		return sky.wind_direction if sky else wind_direction
+	
+
+#####################
+## Reflections
+#####################
+
+@export_group("Reflections")
+
+
+## How Godot regenerates the ambient/reflection cubemap when the sky changes.[br][br]
+## [b]Incremental[/b] spreads one update over several frames and is the right choice for a
+## day/night cycle: ambient light is low-frequency and does not need a same-frame update. This
+## is the same trade Unreal makes with SkyLight "Real Time Capture" time slicing.[br]
+## [b]Realtime[/b] regenerates the whole cubemap every frame. Only worth it if you drive the sky
+## faster than a few times a second and can actually see the lag.[br]
+## [b]Quality[/b] is very expensive and intended for skies that change rarely.
+@export var sky_process_mode: Sky.ProcessMode = Sky.PROCESS_MODE_AUTOMATIC :
+	set(value):
+		sky_process_mode = value
+		if environment and environment.sky:
+			environment.sky.process_mode = value
+
+
+## Resolution of the sky's radiance map, which feeds ambient light and reflections. The map is
+## reprocessed whenever the sky changes, and cloud drift changes it every frame while the wind
+## blows. 128 is half the cost of Godot's 256 default with no visible loss; drop lower for
+## sky-dominated scenes at the cost of reflection fidelity.
+@export var sky_radiance_size: Sky.RadianceSize = Sky.RADIANCE_SIZE_128 :
+	set(value):
+		sky_radiance_size = value
+		if environment and environment.sky:
+			environment.sky.radiance_size = value
 
 
 #####################
@@ -514,6 +546,11 @@ func _initialize() -> void:
 		
 	# Set a reference to the sky material for easy access.
 	sky_material = environment.sky.sky_material
+
+	# Control how Godot regenerates the radiance cubemap. Scenes predating these exports
+	# may carry their own Sky resource and would otherwise keep the engine defaults.
+	environment.sky.process_mode = sky_process_mode
+	environment.sky.radiance_size = sky_radiance_size
 		
 	# Create default camera attributes
 	if camera_attributes == null:

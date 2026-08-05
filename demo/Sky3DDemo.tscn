@@ -199,6 +199,7 @@ shader_parameter/moon_matrix = Basis(-0.5858857, 0.77900034, 0.22337475, 0.37286
 
 [sub_resource type="Sky" id="Sky_0j4pb"]
 sky_material = SubResource("ShaderMaterial_v8wrf")
+radiance_size = 2
 
 [sub_resource type="Environment" id="Environment_1g8sw"]
 background_mode = 2

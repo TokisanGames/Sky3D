@@ -390,8 +390,7 @@ func _update_celestial_coords() -> void:
 			_sky_dome.celestial_north_pole = Vector3(0.0, sin(latitude), cos(latitude))
 
 			if compute_deep_space_coords:
-				if _sky_dome.is_scene_built:
-					_sky_dome.sky_material.set_shader_parameter("star_tilt", HALFPI - latitude)
+				_sky_dome.star_tilt = HALFPI - latitude
 
 		CelestialMode.REALISTIC:
 			_compute_realistic_sun_coords()
@@ -405,9 +404,8 @@ func _update_celestial_coords() -> void:
 			_sky_dome.celestial_north_pole = Vector3(0.0, sin(latitude), -cos(latitude))
 
 			if compute_deep_space_coords:
-				if _sky_dome.is_scene_built:
-					_sky_dome.sky_material.set_shader_parameter("star_tilt", latitude - HALFPI)
-					_sky_dome.sky_material.set_shader_parameter("star_rotation", -_local_sideral_time)
+				_sky_dome.star_tilt = latitude - HALFPI
+				_sky_dome.star_rotation = -_local_sideral_time
 	_sky_dome.update_moon_coords()
 
 

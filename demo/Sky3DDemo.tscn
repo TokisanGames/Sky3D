@@ -158,6 +158,7 @@ shader_parameter/star_field_color = Color(1, 1, 1, 1)
 shader_parameter/star_field_texture = ExtResource("8_humls")
 shader_parameter/star_scintillation = 0.75
 shader_parameter/star_scintillation_speed = 0.01
+shader_parameter/star_scintillation_offset = 0.09383333333333288
 shader_parameter/noise_tex = ExtResource("7_d0ed4")
 shader_parameter/starfield_enabled = true
 shader_parameter/clouds_night_color = Color(0.090196, 0.094118, 0.129412, 1)

@@ -237,14 +237,18 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 
 	if _contrib_tween:
 		_contrib_tween.kill()
+
+	var contrib_target: float = sky_contribution
+	if not daytime and night_ambient_boost:
+		contrib_target = minf(night_sky_contribution, sky_contribution)
+
+	if Engine.is_editor_hint() or contribution_tween_time <= 0.0:
+		environment.ambient_light_sky_contribution = contrib_target
+		return
+
 	_contrib_tween = get_tree().create_tween()
 	_contrib_tween.set_parallel(true)
-	
-	if daytime:
-		_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", sky_contribution, contribution_tween_time)
-	else:
-		var night_contrib: float = minf(night_sky_contribution, sky_contribution) if night_ambient_boost else sky_contribution
-		_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", night_contrib, contribution_tween_time)
+	_contrib_tween.tween_property(environment, "ambient_light_sky_contribution", contrib_target, contribution_tween_time)
 
 
 #####################

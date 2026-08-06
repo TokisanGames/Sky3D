@@ -124,7 +124,7 @@ func _process(delta: float) -> void:
 ## If [method process_method] is set to manual, this function can be called with the number of 
 ## seconds passed to update the position of the clouds.
 func process_tick(delta: float) -> void:
-	if not (cirrus_visible or cumulus_visible):
+	if not is_scene_built or not (cirrus_visible or cumulus_visible):
 		return
 	var position_delta: Vector2 = _cloud_velocity * delta
 	if cumulus_visible:
@@ -938,7 +938,7 @@ enum { PHYSICS_PROCESS, PROCESS, MANUAL }
 
 
 func _check_cloud_processing() -> void:
-	var enable: bool = (cirrus_visible or cumulus_visible) and wind_speed != 0.0
+	var enable: bool = is_scene_built and (cirrus_visible or cumulus_visible) and wind_speed != 0.0
 	_cloud_velocity = _cloud_direction * _cloud_speed
 	match process_method:
 		PHYSICS_PROCESS:

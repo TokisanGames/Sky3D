@@ -12,7 +12,7 @@ class_name Sky3D
 extends WorldEnvironment
 
 ## Emitted when the environment has changed to a new resource.
-signal environment_changed
+signal environment_changed(environment: Environment)
 
 const SKY_SHADER: String = "res://addons/sky_3d/shaders/SkyMaterial.gdshader"
 

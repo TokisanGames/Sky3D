@@ -92,7 +92,8 @@ func _build_scene() -> void:
 	fog_mesh.material_override = fog_material
 	fog_mesh.transform.origin = Vector3.ZERO
 	fog_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	fog_mesh.custom_aabb = AABB(Vector3(-1e31, -1e31, -1e31), Vector3(2e31, 2e31, 2e31))
+	# 1e10 is adequately far past the far plane and safe. 1e31 overflows float32 when squaring for calculating distance
+	fog_mesh.custom_aabb = AABB(Vector3(-1e10, -1e10, -1e10), Vector3(2e10, 2e10, 2e10))
 	add_child(fog_mesh)
 	is_scene_built = true
 

@@ -1301,16 +1301,16 @@ func _check_cloud_processing() -> void:
 ## Overlays a grid aligned to the horizon and the sky zenith.
 @export var show_azimuthal_grid: bool = false :
 	set(value):
+		show_azimuthal_grid = value
 		if is_scene_built:
-			show_azimuthal_grid = value
 			sky_material.set_shader_parameter("show_azimuthal_grid", value)
 
 
 ## Color for azimuthal coordinate grid lines.
 @export var azimuthal_grid_color := Color.BURLYWOOD:
 	set(value):
+		azimuthal_grid_color = value
 		if is_scene_built:
-			azimuthal_grid_color = value
 			sky_material.set_shader_parameter("azimuthal_grid_color", value)
 
 
@@ -1325,16 +1325,16 @@ func _check_cloud_processing() -> void:
 ## Overlays a grid aligned to the celestial equator and the north celestial pole (near Polaris).
 @export var show_equatorial_grid: bool = false :
 	set(value):
+		show_equatorial_grid = value
 		if is_scene_built:
-			show_equatorial_grid = value
 			sky_material.set_shader_parameter("show_equatorial_grid", value)
 
 
 ## Color for equatorial coordinate grid lines.
 @export var equatorial_grid_color := Color(.0, .75, 1.) :
 	set(value):
+		equatorial_grid_color = value
 		if is_scene_built:
-			equatorial_grid_color = value
 			sky_material.set_shader_parameter("equatorial_grid_color", value)
 
 

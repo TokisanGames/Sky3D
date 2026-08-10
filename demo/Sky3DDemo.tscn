@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://c5friqigqdh4k"]
+[gd_scene load_steps=18 format=3 uid="uid://c5friqigqdh4k"]
 
 [ext_resource type="PackedScene" uid="uid://dipn6t27p0nap" path="res://demo/assets/scenes/PrimitivesCity.tscn" id="2"]
 [ext_resource type="Script" uid="uid://deo0gxkmk2ahd" path="res://addons/sky_3d/src/Sky3D.gd" id="2_cejat"]
@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://2r8ylu6rg5dp" path="res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png" id="6_v8wrf"]
 [ext_resource type="Texture2D" uid="uid://djpfuyxkryegn" path="res://addons/sky_3d/assets/textures/noise.jpg" id="7_d0ed4"]
 [ext_resource type="Texture2D" uid="uid://bm7dot7t7u1q4" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg" id="8_humls"]
+[ext_resource type="Script" uid="uid://smeysd7agxxn" path="res://addons/sky_3d/src/Weather.gd" id="12_0j4pb"]
 
 [sub_resource type="GDScript" id="GDScript_v8wrf"]
 script/source = "extends Node3D
@@ -259,3 +260,12 @@ wind_direction = 1.5708
 script = ExtResource("3")
 dome_path = NodePath("../SkyDome")
 current_time = 6.15
+
+[node name="Weather" type="Node3D" parent="Sky3D" node_paths=PackedStringArray("sky_3d")]
+script = ExtResource("12_0j4pb")
+sky_3d = NodePath("..")
+
+[node name="CollisionField" type="GPUParticlesCollisionHeightField3D" parent="Sky3D/Weather"]
+size = Vector3(20, 20, 20)
+
+[node name="Sounds" type="Node3D" parent="Sky3D/Weather"]

@@ -29,6 +29,8 @@ var tod: TimeOfDay
 var sky: SkyDome
 ## The Sky shader.
 var sky_material: ShaderMaterial
+# The climate system
+var weather: Weather
 
 ## Enables all rendering and time tracking.
 @export var sky3d_enabled: bool = true :
@@ -403,14 +405,20 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 #####################
 ## Weather
 #####################
+# Weather.EffectType is the single source of truth. A local copy used to exist here starting with
+# NONE instead of CLEAR, so the two enums' integer values didn't line up.
 
 @export_group("Weather")
+
+@export var preciptation: Weather.EffectType = Weather.EffectType.CLEAR : set = _set_force_effect
+@export var force_quantity: float = 0.8 : set = _set_force_quantity
 
 ## Sets the wind speed. Alias for [member SkyDome.wind_speed].
 @export_custom(PROPERTY_HINT_RANGE, "0,120,0.1,or_greater,or_less,suffix:m/s") var wind_speed: float = 1.0 :
 	set(value):
 		if sky:
 			sky.wind_speed = value
+			_update_effect_direction()
 	get:
 		return sky.wind_speed if sky else wind_speed
 
@@ -418,10 +426,27 @@ func _start_sky_contrib_tween(daytime: bool = is_day()) -> void:
 ## 180 from the south and 270 (or -90) from the west. Alias for [member SkyDome.wind_direction].
 @export_custom(PROPERTY_HINT_RANGE, "-180,180,0.1,radians_as_degrees") var wind_direction: float = 0.0 :
 	set(value):
+		wind_direction = value
+		# SkyDome's own setter recomputes _cloud_direction from this value, so don't pre-compute it
+		# here: it ran before the null check, and applied deg_to_rad to an already-radian value.
 		if sky:
 			sky.wind_direction = value
+			_update_effect_direction()
 	get:
 		return sky.wind_direction if sky else wind_direction
+
+
+
+func _update_effect_direction():
+	if sky:
+		var speed_factor = clamp(sky.wind_speed / 120.0, 0.0, 1.0)
+		var direction_vector = Vector3(
+			-sky._cloud_direction.x * speed_factor, 
+			-1.0,
+			-sky._cloud_direction.y * speed_factor
+		)
+		_set_force_direction(direction_vector)
+###
 
 
 #####################
@@ -533,6 +558,14 @@ func _initialize() -> void:
 		tod.dome_path = "../SkyDome"
 	if sky and not sky.day_night_changed.is_connected(_start_sky_contrib_tween):
 		sky.day_night_changed.connect(_start_sky_contrib_tween)
+	
+	if has_node("Weather"):
+		weather = $Weather
+	elif is_inside_tree():
+		weather = Weather.new()
+		weather.name = "Weather"
+		add_child(weather, true)
+		weather.owner = get_tree().edited_scene_root
 
 
 func _enter_tree() -> void:
@@ -547,3 +580,66 @@ func _set(property: StringName, value: Variant) -> bool:
 			emit_signal("environment_changed", environment)
 			return true
 	return false
+
+func _set_force_effect(value: Weather.EffectType):
+	preciptation = value
+	if Engine.is_editor_hint():
+		weather.set_effect_type(preciptation, force_quantity)
+
+func _set_force_quantity(value: float):
+	force_quantity = clamp(value, 0.0, 1.0)
+	if Engine.is_editor_hint():
+		weather.set_effect_type(preciptation, force_quantity)
+
+func _set_force_direction(value: Vector3):
+	#direction = value
+	# Not gated on Engine.is_editor_hint(): wind has to steer precipitation in a running game too.
+	if has_weather():
+		weather.set_effect_direction(value)
+
+func has_weather() -> bool:
+	return weather != null and is_instance_valid(weather)
+
+
+### public access
+
+## Starts rain at [param intensity] (0-1), replacing any effect already running.
+## Lightning follows [member Weather.lightning_enabled].
+func start_rain(intensity: float = 0.8) -> void:
+	if has_weather():
+		weather.set_effect_type(Weather.EffectType.RAIN, intensity)
+
+
+## Starts snow at [param intensity] (0-1), replacing any effect already running.
+func start_snow(intensity: float = 0.8) -> void:
+	if has_weather():
+		weather.set_effect_type(Weather.EffectType.SNOW, intensity)
+
+
+## Starts the custom/debris effect at [param intensity] (0-1), replacing any effect already running.
+func start_debris(intensity: float = 0.8) -> void:
+	if has_weather():
+		weather.set_effect_type(Weather.EffectType.CUSTOM, intensity)
+
+
+## Starts an effect that fades itself out and clears after [param duration] seconds.
+## [param effect] is one of "rain", "snow" or "custom". Unlike the start_* methods this does not
+## stop effects already running, so clear them first if you don't want them layered.
+func start_weather_for(effect: String, intensity: float = 0.8, duration: float = 60.0) -> void:
+	if has_weather():
+		weather.change_weather(effect, 0.0, intensity, duration, weather.lightning_enabled)
+
+
+## Stops all effects immediately, including lightning and its audio.
+func stop_weather():
+	if has_weather():
+		weather.stop_all_effects()
+
+func get_current_weather_type() -> Weather.EffectType:
+	if has_weather():
+		return weather.get_current_effect_type()
+	# Must not go through 'weather' here -- this branch is exactly when it's null or freed.
+	return Weather.EffectType.CLEAR
+
+func is_weather_active() -> bool:
+	return has_weather() and weather.get_current_effect_type() != Weather.EffectType.CLEAR

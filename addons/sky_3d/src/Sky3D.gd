@@ -17,7 +17,7 @@ signal environment_changed
 const SKY_SHADER: String = "res://addons/sky_3d/shaders/SkyMaterial.gdshader"
 
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
-var version: String = "2.1"
+var version: String = "2.2-dev"
 
 ## The Sun DirectionalLight.
 var sun: DirectionalLight3D

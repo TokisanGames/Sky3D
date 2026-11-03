@@ -77,35 +77,35 @@ uniform vec4 clouds_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
 
 group_uniforms cirrus_clouds;
 uniform bool cirrus_visible = true;
-uniform float cirrus_intensity = 2.0;
 uniform float cirrus_coverage = 0.5;
 uniform float cirrus_thickness = 10.0;
-uniform float cirrus_absorption = 2.0;
-uniform float cirrus_sky_tint_fade = 0.5;
 uniform float cirrus_size = 1.0;
 uniform vec2 cirrus_uv = vec2(0.16, 0.11);
+uniform sampler2D cirrus_texture;
+uniform float cirrus_intensity = 2.0;
+uniform float cirrus_absorption = 2.0;
+uniform float cirrus_sky_tint_fade = 0.5;
 uniform vec2 cirrus_position1 = vec2(0.0);
 uniform vec2 cirrus_position2 = vec2(0.0);
-uniform sampler2D cirrus_texture;
 
 group_uniforms cumulus_clouds;
 uniform bool cumulus_visible = true;
-uniform float cumulus_intensity = 0.6;
+uniform bool cumulus_hq_noise = false;
+uniform int cumulus_steps_zenith = 10;
+uniform int cumulus_steps_horizon = 10;
 uniform float cumulus_coverage = 0.55;
 uniform float cumulus_thickness = 0.0243;
-uniform float cumulus_absorption = 2.0;
 uniform float cumulus_noise_freq = 2.7;
-uniform float cumulus_sky_tint_fade = 0.0;
+uniform float cumulus_noise_scale = 0.35;
 uniform float cumulus_size = 0.5;
-uniform vec2 cumulus_position = vec2(0.0);
-uniform bool cumulus_use_3d_noise = true;
 uniform sampler2D cumulus_texture_2d;
 uniform sampler3D cumulus_texture_3d;
-uniform int cumulus_steps_zenith = 20;
-uniform int cumulus_steps_horizon = 25;
-uniform float cumulus_noise_scale = 0.35;
-uniform vec3 cumulus_partial_mie_phase = vec3(0.95756, 1.04244, 0.412);
+uniform float cumulus_intensity = 0.6;
+uniform float cumulus_absorption = 2.0;
 uniform float cumulus_mie_intensity = 1.0;
+uniform vec3 cumulus_partial_mie_phase = vec3(0.95756, 1.04244, 0.412);
+uniform float cumulus_sky_tint_fade = 0.0;
+uniform vec2 cumulus_position = vec2(0.0);
 
 group_uniforms overlays;
 uniform bool show_azimuthal_grid = false;
@@ -243,11 +243,11 @@ float sample_cirrus_noise(vec2 coords) {
 }
 
 float sample_cumulus_noise(vec3 p) {
-	if (cumulus_use_3d_noise) {
+	if (cumulus_hq_noise) {
 		return textureLod(cumulus_texture_3d, p * cumulus_noise_scale, 0.0).r;
 	}
-	// Fake 3D noise: blend two 2D slices. Faster than true 3D sampling,
-	// but produces directional streaking artifacts near the zenith.
+	// Simulate 3D noise by blending two 2D slices. Faster than true 3D sampling,
+	// but produces directional streaking artifacts near the zenith and horizon.
 	vec3 pos = vec3(p * 0.01);
 	pos.z *= 256.0;
 	vec2 offset = vec2(0.317, 0.123);
@@ -305,7 +305,7 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 	vec3 wind = -vec3(cumulus_position.x, 0.0, cumulus_position.y);
 	float a = 0.0;
 
-	// n and tt doesnt need to be initialized since it would be set by ray_sphere_intersect
+	// n and tt don't need to be initialized since it would be set by ray_sphere_intersect
 	vec3 n; float tt;
 	if (ray_sphere_intersect(500., ro, rd, tt, n)) {
 		// 0°-15°: horizon steps (flat), 15°-30°: S-curve transition, 30°+: zenith steps (flat)

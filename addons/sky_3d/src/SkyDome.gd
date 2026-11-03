@@ -17,8 +17,8 @@ const STARMAP_TEXTURE: Texture2D = preload("res://addons/sky_3d/assets/thirdpart
 const STARFIELD_TEXTURE: Texture2D = preload("res://addons/sky_3d/assets/thirdparty/textures/milkyway/StarField.jpg")
 const STARFIELD_NOISE: Texture2D = preload("res://addons/sky_3d/assets/textures/noise.jpg")
 const CIRRUS_TEXTURE: Texture2D = preload("res://addons/sky_3d/assets/resources/SNoise.tres")
-const CUMULUS_TEXTURE_2D: Texture2D = preload("res://addons/sky_3d/assets/textures/noiseClouds.png")
-const CUMULUS_TEXTURE_3D: Texture3D = preload("res://addons/sky_3d/assets/textures/cumulus_noise_3d.tres")
+const CUMULUS_TEXTURE_2D_PATH: String = "res://addons/sky_3d/assets/textures/noiseClouds.png"
+const CUMULUS_TEXTURE_3D_PATH: String = "res://addons/sky_3d/assets/resources/cumulus_noise_3d.tres"
 const SUN_MOON_CURVE: Curve = preload("res://addons/sky_3d/assets/resources/SunMoonLightFade.tres")
 const DAY_NIGHT_TRANSITION_ANGLE: float = deg_to_rad(90)  # Horizon
 
@@ -919,13 +919,13 @@ func _check_cloud_processing() -> void:
 			sky_material.set_shader_parameter("cirrus_visible", value)
 			_check_cloud_processing()
 
-## Adjusts the brightness of cirrus clouds. If covering the sky, this has a dramatic affect on lighting.
-@export_range(0.0, 16.0, 0.005) var cirrus_intensity: float = 2.0 :
-	set(value):
-		cirrus_intensity = value
-		if is_scene_built:
-			sky_material.set_shader_parameter("cirrus_intensity", cirrus_intensity)
 
+## How much of the sky is covered by cirrus clouds.
+@export_range(0.0, 3.0, 0.001) var cirrus_coverage: float = 0.5 :
+	set(value):
+		cirrus_coverage = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("cirrus_coverage", cirrus_coverage)
 
 
 ## Set density for cirrus clouds.
@@ -936,12 +936,37 @@ func _check_cloud_processing() -> void:
 			sky_material.set_shader_parameter("cirrus_thickness", cirrus_thickness)
 
 
-## How much of the sky is covered by cirrus clouds.
-@export_range(0.0, 1.0, 0.001) var cirrus_coverage: float = 0.5 :
+## Adjusts the scale of the noise texture, which indirectly affects the apparent height and 
+## speed of the clouds. Use it with [member cirrus_speed_reduction] to refine cirrus speed and height.
+@export var cirrus_size: float = 1.0 :
 	set(value):
-		cirrus_coverage = value
+		cirrus_size = value
 		if is_scene_built:
-			sky_material.set_shader_parameter("cirrus_coverage", cirrus_coverage)
+			sky_material.set_shader_parameter("cirrus_size", cirrus_size)
+
+
+## Sets the aspect ratio of the cirrus texture used for the clouds.
+@export var cirrus_uv := Vector2(0.16, 0.11) :
+	set(value):
+		cirrus_uv = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("cirrus_uv", cirrus_uv)
+
+
+## The noise texture used for generating cirrus cloud patterns.
+@export var cirrus_texture: Texture2D = CIRRUS_TEXTURE :
+	set(value):
+		cirrus_texture = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("cirrus_texture", cirrus_texture)
+
+
+## Adjusts the brightness of cirrus clouds. If covering the sky, this has a dramatic effect on lighting.
+@export_range(0.0, 16.0, 0.005) var cirrus_intensity: float = 2.25 :
+	set(value):
+		cirrus_intensity = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("cirrus_intensity", cirrus_intensity)
 
 
 ## Higher values create more opaque clouds.
@@ -960,31 +985,6 @@ func _check_cloud_processing() -> void:
 			sky_material.set_shader_parameter("cirrus_sky_tint_fade", cirrus_sky_tint_fade)
 
 
-## The noise texture used for generating cirrus cloud patterns.
-@export var cirrus_texture: Texture2D = CIRRUS_TEXTURE :
-	set(value):
-		cirrus_texture = value
-		if is_scene_built:
-			sky_material.set_shader_parameter("cirrus_texture", cirrus_texture)
-
-
-## Sets the aspect ratio of the cirrus texture used for the clouds.
-@export var cirrus_uv := Vector2(0.16, 0.11) :
-	set(value):
-		cirrus_uv = value
-		if is_scene_built:
-			sky_material.set_shader_parameter("cirrus_uv", cirrus_uv)
-
-
-## Adjusts the scale of the noise texture, which indirectly affects the apparent height and 
-## speed of the clouds. Use it with [member cirrus_speed_reduction] to refine cirrus speed and height.
-@export var cirrus_size: float = 1.0 :
-	set(value):
-		cirrus_size = value
-		if is_scene_built:
-			sky_material.set_shader_parameter("cirrus_size", cirrus_size)
-
-
 #####################
 ## Cumulus Clouds
 #####################
@@ -1001,20 +1001,41 @@ func _check_cloud_processing() -> void:
 			_check_cloud_processing()
 
 
-## Adjusts the brightness of cumulus clouds. If covering the sky, this has a dramatic affect on lighting.
-@export_range(0, 16, 0.005) var cumulus_intensity: float = 0.6 :
+## Generates cumulus cloud patterns using the 3D noise texture if enabled, otherwise the 2D textures.
+## 3D noise fixes directional streaking artifacts near the zenith and horizon, but at a higher 
+## performance cost. Also increases [member cumulus_steps_zenith] and [member cumulus_steps_horizon].
+@export var cumulus_hq_noise: bool = false :
 	set(value):
-		cumulus_intensity = value
+		cumulus_hq_noise = value
 		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_intensity", cumulus_intensity)
+			cumulus_material.set_shader_parameter("cumulus_hq_noise", cumulus_hq_noise)
+		cumulus_steps_zenith = 20 if cumulus_hq_noise else 10
+		cumulus_steps_horizon = 25 if cumulus_hq_noise else 10
+
+		if cumulus_hq_noise:
+			cumulus_texture_2d = null
+			if cumulus_texture_3d == null:
+				cumulus_texture_3d = load(CUMULUS_TEXTURE_3D_PATH)
+		else:
+			cumulus_texture_3d = null
+			if cumulus_texture_2d == null:
+				cumulus_texture_2d = load(CUMULUS_TEXTURE_2D_PATH)
 
 
-## Controls the vertical depth and layering thickness of the cumulus clouds.
-@export var cumulus_thickness: float = 0.0243 :
+## Ray march steps at zenith (looking up). Fewer steps needed because sampling density is high.
+@export_range(4, 64) var cumulus_steps_zenith: int = 10 :
 	set(value):
-		cumulus_thickness = value
+		cumulus_steps_zenith = value
 		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_thickness", cumulus_thickness)
+			cumulus_material.set_shader_parameter("cumulus_steps_zenith", cumulus_steps_zenith)
+
+
+## Ray march steps at the horizon. More steps needed to compensate for stretched sampling at low angles.
+@export_range(4, 128) var cumulus_steps_horizon: int = 10 :
+	set(value):
+		cumulus_steps_horizon = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_steps_horizon", cumulus_steps_horizon)
 
 
 ## Sets how much of the sky is covered by the cumulus clouds.
@@ -1025,12 +1046,12 @@ func _check_cloud_processing() -> void:
 			cumulus_material.set_shader_parameter("cumulus_coverage", cumulus_coverage)
 
 
-## Adjusts light absorption inside the cumulus clouds, increasing opacity and internal shadows for denser, more realistic volumes.
-@export var cumulus_absorption: float = 2.0 :
+## Controls the vertical depth and layering thickness of the cumulus clouds.
+@export var cumulus_thickness: float = 0.0243 :
 	set(value):
-		cumulus_absorption = value
+		cumulus_thickness = value
 		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_absorption", cumulus_absorption)
+			cumulus_material.set_shader_parameter("cumulus_thickness", cumulus_thickness)
 
 
 ## Changes the frequency of noise in the cumulus cloud generation; higher values create clouds with more detail.
@@ -1039,6 +1060,59 @@ func _check_cloud_processing() -> void:
 		cumulus_noise_freq = value
 		if is_scene_built:
 			cumulus_material.set_shader_parameter("cumulus_noise_freq", cumulus_noise_freq)
+
+
+## Scale factor for sampling the 3D noise texture. Higher values produce smaller,
+## more numerous clouds. Lower values produce larger, fewer clouds.
+## Only applies when [member cumulus_hq_noise] is enabled.
+@export_range(0.05, 1.0, 0.05) var cumulus_noise_scale: float = 0.35 :
+	set(value):
+		cumulus_noise_scale = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_noise_scale", cumulus_noise_scale)
+
+
+## This parameter adjusts the scale of the noise texture, which indirectly affects the apparent height and
+## speed of the clouds.
+@export var cumulus_size: float = 0.5 :
+	set(value):
+		cumulus_size = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_size", cumulus_size)
+
+
+## The 2D noise texture used for generating cumulus cloud patterns when
+## [member cumulus_hq_noise] is disabled.
+@export var cumulus_texture_2d: Texture2D = load(CUMULUS_TEXTURE_2D_PATH) :
+	set(value):
+		cumulus_texture_2d = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_texture_2d", cumulus_texture_2d)
+
+
+## The 3D noise texture used for generating cumulus cloud patterns when
+## [member cumulus_hq_noise] is enabled.
+@export var cumulus_texture_3d: Texture3D = load(CUMULUS_TEXTURE_3D_PATH) :
+	set(value):
+		cumulus_texture_3d = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_texture_3d", cumulus_texture_3d)
+
+
+## Adjusts the brightness of cumulus clouds. If covering the sky, this has a dramatic effect on lighting.
+@export_range(0, 16, 0.005) var cumulus_intensity: float = 0.6 :
+	set(value):
+		cumulus_intensity = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_intensity", cumulus_intensity)
+
+
+## Adjusts light absorption inside the cumulus clouds, increasing opacity and internal shadows for denser, more realistic volumes.
+@export var cumulus_absorption: float = 2.0 :
+	set(value):
+		cumulus_absorption = value
+		if is_scene_built:
+			cumulus_material.set_shader_parameter("cumulus_absorption", cumulus_absorption)
 
 
 ## Controls the strength of hazy light scattering around the cumulus clouds from the sun and moon, enhancing glow and diffusion near edges.
@@ -1057,71 +1131,6 @@ func _check_cloud_processing() -> void:
 		if is_scene_built:
 			var partial: Vector3 = ScatterLib.get_partial_mie_phase(cumulus_mie_anisotropy)
 			cumulus_material.set_shader_parameter("cumulus_partial_mie_phase", partial)
-
-
-## Use the 3D noise texture for generating cumulus cloud patterns. Produces clouds free of
-## directional streaking artifacts near the zenith, at a higher performance cost. Disable to
-## use the faster 2D noise texture. To fully restore the performance of earlier versions, also
-## set [member cumulus_steps_zenith] and [member cumulus_steps_horizon] to 10, matching the
-## fixed step count previously used.
-@export var cumulus_use_3d_noise: bool = true :
-	set(value):
-		cumulus_use_3d_noise = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_use_3d_noise", cumulus_use_3d_noise)
-
-
-## The 2D noise texture used for generating cumulus cloud patterns when
-## [member cumulus_use_3d_noise] is disabled.
-@export var cumulus_texture_2d: Texture2D = CUMULUS_TEXTURE_2D :
-	set(value):
-		cumulus_texture_2d = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_texture_2d", cumulus_texture_2d)
-
-
-## The 3D noise texture used for generating cumulus cloud patterns when
-## [member cumulus_use_3d_noise] is enabled.
-@export var cumulus_texture_3d: Texture3D = CUMULUS_TEXTURE_3D :
-	set(value):
-		cumulus_texture_3d = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_texture_3d", cumulus_texture_3d)
-
-
-## Ray march steps at zenith (looking up). Fewer steps needed because sampling density is high.
-@export_range(4, 64) var cumulus_steps_zenith: int = 20 :
-	set(value):
-		cumulus_steps_zenith = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_steps_zenith", cumulus_steps_zenith)
-
-
-## Ray march steps at the horizon. More steps needed to compensate for stretched sampling at low angles.
-@export_range(4, 128) var cumulus_steps_horizon: int = 25 :
-	set(value):
-		cumulus_steps_horizon = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_steps_horizon", cumulus_steps_horizon)
-
-
-## Scale factor for sampling the 3D noise texture. Higher values produce smaller,
-## more numerous clouds. Lower values produce larger, fewer clouds.
-## Only applies when [member cumulus_use_3d_noise] is enabled.
-@export_range(0.05, 1.0, 0.05) var cumulus_noise_scale: float = 0.35 :
-	set(value):
-		cumulus_noise_scale = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_noise_scale", cumulus_noise_scale)
-
-
-## This parameter adjusts the scale of the noise texture, which indirectly affects the apparent height and
-## speed of the clouds.
-@export var cumulus_size: float = 0.5 :
-	set(value):
-		cumulus_size = value
-		if is_scene_built:
-			cumulus_material.set_shader_parameter("cumulus_size", cumulus_size)
 
 
 #####################

@@ -1,13 +1,12 @@
-[gd_scene load_steps=18 format=3 uid="uid://c5friqigqdh4k"]
+[gd_scene load_steps=17 format=3 uid="uid://c5friqigqdh4k"]
 
 [ext_resource type="PackedScene" uid="uid://dipn6t27p0nap" path="res://demo/assets/scenes/PrimitivesCity.tscn" id="2"]
 [ext_resource type="Script" uid="uid://deo0gxkmk2ahd" path="res://addons/sky_3d/src/Sky3D.gd" id="2_cejat"]
 [ext_resource type="Script" uid="uid://cjmkcj8hwm7ts" path="res://addons/sky_3d/src/TimeOfDay.gd" id="3"]
 [ext_resource type="Script" uid="uid://b4tkplvh7fq40" path="res://addons/sky_3d/src/SkyDome.gd" id="4"]
-[ext_resource type="Texture2D" uid="uid://cecwdqjol0ckd" path="res://addons/sky_3d/assets/textures/noiseClouds.png" id="4_0j4pb"]
+[ext_resource type="NoiseTexture3D" uid="uid://cmraj4fdhubaq" path="res://addons/sky_3d/assets/resources/cumulus_noise_3d.tres" id="4_0j4pb"]
 [ext_resource type="Shader" uid="uid://cvd0x7lon1ur6" path="res://addons/sky_3d/shaders/SkyMaterial.gdshader" id="4_v8wrf"]
 [ext_resource type="Texture2D" uid="uid://c1vwcdcdvb74a" path="res://addons/sky_3d/assets/thirdparty/textures/milkyway/Milkyway.jpg" id="5_0j4pb"]
-[ext_resource type="NoiseTexture3D" uid="uid://cmraj4fdhubaq" path="res://addons/sky_3d/assets/resources/cumulus_noise_3d.tres" id="5_1g8sw"]
 [ext_resource type="Texture2D" uid="uid://cfqk60lpl5ljv" path="res://addons/sky_3d/assets/resources/SNoise.tres" id="6_1g8sw"]
 [ext_resource type="Texture2D" uid="uid://2r8ylu6rg5dp" path="res://addons/sky_3d/assets/thirdparty/textures/moon/MoonMap.png" id="6_v8wrf"]
 [ext_resource type="Texture2D" uid="uid://djpfuyxkryegn" path="res://addons/sky_3d/assets/textures/noise.jpg" id="7_d0ed4"]
@@ -142,7 +141,7 @@ shader_parameter/moon_texture_flip_u = false
 shader_parameter/moon_texture_flip_v = false
 shader_parameter/moon_size = 0.07
 shader_parameter/atm_moon_mie_tint = Color(0.137255, 0.184314, 0.292196, 1)
-shader_parameter/atm_moon_mie_intensity = 0.23658217810094354
+shader_parameter/atm_moon_mie_intensity = 0.23824333198368547
 shader_parameter/atm_moon_partial_mie_phase = Vector3(0.36, 1.64, 1.6)
 shader_parameter/starmap_color = Color(0.709804, 0.709804, 0.709804, 0.854902)
 shader_parameter/starmap_texture = ExtResource("5_0j4pb")
@@ -159,40 +158,39 @@ shader_parameter/star_scintillation_speed = 0.01
 shader_parameter/noise_tex = ExtResource("7_d0ed4")
 shader_parameter/clouds_night_color = Color(0.090196, 0.094118, 0.129412, 1)
 shader_parameter/cirrus_visible = true
-shader_parameter/cirrus_intensity = 2.0
 shader_parameter/cirrus_coverage = 0.5
 shader_parameter/cirrus_thickness = 1.7
-shader_parameter/cirrus_absorption = 2.0
-shader_parameter/cirrus_sky_tint_fade = 0.5
 shader_parameter/cirrus_size = 1.0
 shader_parameter/cirrus_uv = Vector2(0.16, 0.11)
-shader_parameter/cirrus_position1 = Vector2(0.7308965, 5.0460643e-05)
-shader_parameter/cirrus_position2 = Vector2(0.7308965, 5.0460643e-05)
 shader_parameter/cirrus_texture = ExtResource("6_1g8sw")
+shader_parameter/cirrus_intensity = 2.0
+shader_parameter/cirrus_absorption = 2.0
+shader_parameter/cirrus_sky_tint_fade = 0.5
+shader_parameter/cirrus_position1 = Vector2(0.20370045, 7.4823447e-07)
+shader_parameter/cirrus_position2 = Vector2(0.20370045, 7.4823447e-07)
 shader_parameter/cumulus_visible = true
-shader_parameter/cumulus_intensity = 0.6
-shader_parameter/cumulus_coverage = 0.55
-shader_parameter/cumulus_thickness = 0.0243
-shader_parameter/cumulus_absorption = 2.0
-shader_parameter/cumulus_noise_freq = 2.7
-shader_parameter/cumulus_sky_tint_fade = 0.0
-shader_parameter/cumulus_size = 0.5
-shader_parameter/cumulus_position = Vector2(79.19066, 0.00029048725)
-shader_parameter/cumulus_use_3d_noise = true
-shader_parameter/cumulus_texture_2d = ExtResource("4_0j4pb")
-shader_parameter/cumulus_texture_3d = ExtResource("5_1g8sw")
+shader_parameter/cumulus_hq_noise = true
 shader_parameter/cumulus_steps_zenith = 20
 shader_parameter/cumulus_steps_horizon = 25
+shader_parameter/cumulus_coverage = 0.55
+shader_parameter/cumulus_thickness = 0.0243
+shader_parameter/cumulus_noise_freq = 2.7
 shader_parameter/cumulus_noise_scale = 0.35
-shader_parameter/cumulus_partial_mie_phase = Vector3(0.957564, 1.042436, 0.412)
+shader_parameter/cumulus_size = 0.5
+shader_parameter/cumulus_texture_3d = ExtResource("4_0j4pb")
+shader_parameter/cumulus_intensity = 0.6
+shader_parameter/cumulus_absorption = 2.0
 shader_parameter/cumulus_mie_intensity = 1.0
+shader_parameter/cumulus_partial_mie_phase = Vector3(0.957564, 1.042436, 0.412)
+shader_parameter/cumulus_sky_tint_fade = 0.0
+shader_parameter/cumulus_position = Vector2(1.0184913, 3.741125e-06)
 shader_parameter/show_azimuthal_grid = false
 shader_parameter/azimuthal_grid_color = Color(0.87058824, 0.72156864, 0.5294118, 1)
 shader_parameter/azimuthal_grid_rotation_offset = 0.03
 shader_parameter/show_equatorial_grid = false
 shader_parameter/equatorial_grid_color = Color(0, 0.75, 1, 1)
 shader_parameter/equatorial_grid_rotation_offset = 0.03
-shader_parameter/moon_matrix = Basis(-7.4505815e-09, -0.27634087, 0.9610598, -0.9609947, -0.2657975, -0.0764268, 0.2765671, -0.9235733, -0.26556212)
+shader_parameter/moon_matrix = Basis(-0.2136861, -0.93905884, -0.26927078, 0.42194438, 0.15988043, -0.89241314, 0.88107955, -0.30431357, 0.3620664)
 
 [sub_resource type="Sky" id="Sky_0j4pb"]
 sky_material = SubResource("ShaderMaterial_v8wrf")
@@ -245,7 +243,7 @@ directional_shadow_blend_splits = true
 directional_shadow_max_distance = 600.0
 
 [node name="MoonLight" type="DirectionalLight3D" parent="Sky3D"]
-transform = Transform3D(0, -0.9609946, 0.27656707, -0.27634087, -0.26579747, -0.9235732, 0.9610597, -0.07642679, -0.2655621, 0.27656707, -0.9235732, -0.2655621)
+transform = Transform3D(0, -0.4729681, 0.88107955, 0.7655197, -0.5668976, -0.30431357, 0.6434125, 0.6744837, 0.3620664, 0.88107955, -0.30431357, 0.3620664)
 light_color = Color(0.572549, 0.776471, 0.956863, 1)
 light_energy = 0.0
 directional_shadow_blend_splits = true
@@ -255,11 +253,15 @@ directional_shadow_max_distance = 256.0
 script = ExtResource("4")
 sun_azimuth = -1.9766359
 sun_altitude = -1.6111549
-moon_azimuth = -0.80569494
-moon_altitude = -2.7480938
+moon_azimuth = -1.9606937
+moon_altitude = -1.8800141
 fog_density = 0.01
 wind_speed = 7.0
 wind_direction = 1.5708
+cumulus_hq_noise = true
+cumulus_steps_zenith = 20
+cumulus_steps_horizon = 25
+cumulus_texture_3d = ExtResource("4_0j4pb")
 
 [node name="TimeOfDay" type="Node" parent="Sky3D"]
 script = ExtResource("3")

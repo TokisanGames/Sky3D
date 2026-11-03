@@ -27,6 +27,14 @@ var fog_mesh: MeshInstance3D
 var sky_material: ShaderMaterial
 var cumulus_material: Material
 var fog_material: Material
+## Matches [member Sky3D.sky_enabled]. When false the dome stops rendering the sky
+## and hides the sun and moon from the fog shader.
+var sky_visible: bool = true :
+	set(value):
+		sky_visible = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("sky_visible", value)
+			_update_fog_celestial_visibility()
 
 
 #####################
@@ -94,6 +102,10 @@ func _build_scene() -> void:
 		if prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE and prop.usage & PROPERTY_USAGE_EDITOR:
 			var prop_name: String = prop.name
 			set(prop_name, get(prop_name))  # Triggers setter with current value
+
+	# Non-editor state set before the scene built (eg. Sky3D.sky_enabled at load)
+	sky_material.set_shader_parameter("sky_visible", sky_visible)
+	_update_fog_celestial_visibility()
 
 
 #####################
@@ -175,6 +187,21 @@ func _update_color_correction() -> void:
 #####################
 
 @export_group("Sun")
+
+
+## Shows the sun (disk and glow) in the sky and fog, and enables its DirectionalLight3D energy
+## and shadow casting. Useful for overcast days or overcast nights.
+@export var sun_visible: bool = true :
+	set(value):
+		sun_visible = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("sun_visible", value)
+			_update_fog_celestial_visibility()
+		if value:
+			_update_sun_coords()
+		elif _sun_light_node:
+			_sun_light_node.light_energy = 0.0
+			_sun_light_node.shadow_enabled = false
 
 
 ## Size of the sun disk.
@@ -318,7 +345,7 @@ func _update_sun_light_color() -> void:
 
 
 func _update_sun_light_energy() -> void:
-	if not _sun_light_node or not sun_light_enabled:
+	if not _sun_light_node or not sun_light_enabled or not sun_visible:
 		return
 	
 	# Light energy should depend on how much of the sun disk is visible.
@@ -337,6 +364,20 @@ func _update_sun_light_energy() -> void:
 #####################
 
 @export_group("Moon")
+
+
+## Shows the moon in the sky and fog. Also enables the MoonLight node's directional light.
+@export var moon_visible: bool = true :
+	set(value):
+		moon_visible = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("moon_visible", value)
+			_update_fog_celestial_visibility()
+		if value:
+			update_moon_coords()
+		elif _moon_light_node:
+			_moon_light_node.light_energy = 0.0
+			_moon_light_node.shadow_enabled = false
 
 
 ## Horizontal angle of the moon
@@ -488,7 +529,7 @@ func _update_moon_light_color() -> void:
 
 
 func _update_moon_light_energy() -> void:
-	if not _moon_light_node or not moon_light_enabled:
+	if not _moon_light_node or not moon_light_enabled or not moon_visible:
 		return
 	
 	var l: float = lerpf(0.0, moon_light_energy, _moon_light_altitude_mult)
@@ -717,6 +758,13 @@ func _update_beta_mie() -> void:
 		fog_visible = value
 		if is_scene_built:
 			fog_mesh.visible = fog_visible
+
+
+## Syncs the fog shader's sun and moon visibility with the sky's visibility state and toggles.
+func _update_fog_celestial_visibility() -> void:
+	if is_scene_built:
+		fog_material.set_shader_parameter("sun_visible", sun_visible and sky_visible)
+		fog_material.set_shader_parameter("moon_visible", moon_visible and sky_visible)
 
 
 ## Set the fog's density
@@ -1146,6 +1194,22 @@ func _check_cloud_processing() -> void:
 #####################
 
 @export_group("Stars")
+
+
+## Shows the distant star map (galaxy, nebulas).
+@export var starmap_visible: bool = true :
+	set(value):
+		starmap_visible = value
+		if sky_material:
+			sky_material.set_shader_parameter("starmap_visible", value)
+
+
+## Shows the nearby starfield (points of light).
+@export var starfield_visible: bool = true :
+	set(value):
+		starfield_visible = value
+		if sky_material:
+			sky_material.set_shader_parameter("starfield_visible", value)
 
 
 ## For aligning the star map texture map to known reference points. See [annotation SkyDome.show_alignment_lasers].

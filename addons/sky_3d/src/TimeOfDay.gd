@@ -106,9 +106,6 @@ var _sky_dome: SkyDome
 	set(value):
 		dome_path = value
 		if dome_path:
-			# DEPRECATED - Remove 2.2
-			if dome_path == NodePath("../Skydome"):
-				dome_path = NodePath("../SkyDome")
 			_sky_dome = get_node_or_null(dome_path)
 		_update_celestial_coords()
 

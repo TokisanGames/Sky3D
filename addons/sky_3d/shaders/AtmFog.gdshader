@@ -15,7 +15,9 @@ uniform float fog_falloff = 3.;
 uniform float fog_start = 0.;
 uniform float fog_end = 1000.;
 uniform vec3 sun_direction = vec3(.25, -.25, .25);
+uniform bool sun_visible = true;
 uniform vec3 moon_direction = vec3(.45, -.25, .45);
+uniform bool moon_visible = true;
 
 uniform float atm_darkness = .5;
 uniform float atm_sun_intensity = 30.;
@@ -141,8 +143,8 @@ void fragment() {
 	fog_factor *= calc_fog_distance(ray_distance);
 
 	vec2 mu = vec2(
-		dot(sun_direction, ray_direction),
-		dot(moon_direction, ray_direction)
+		sun_visible ? dot(sun_direction, ray_direction) : 0.0,
+		moon_visible ? dot(moon_direction, ray_direction) : 0.0
 	);
 	float sr, sm;
 	calc_simple_optical_depth(ray_direction.y + atm_level_params.z, sr, sm, atm_level_params.xy);

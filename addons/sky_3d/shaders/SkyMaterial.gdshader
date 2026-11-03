@@ -26,6 +26,7 @@ uniform vec4 sun_light_color: source_color = vec4(1.0);
 uniform vec4 sun_disk_color: source_color = vec4(0.996, 0.541, 0.14, 1.0);
 uniform float sun_disk_intensity = 2.0;
 uniform float sun_disk_size = 0.015;
+uniform bool sun_visible = true;
 
 group_uniforms sun_mie;
 uniform vec4 atm_sun_mie_tint: source_color = vec4(1.0);
@@ -319,7 +320,7 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 		vec3 dir_step = rd / ry * march_step;
 		vec3 pos = n * cumulus_size;
 
-		vec2 mu = vec2(dot(sun_pos, rd), moon_visible ? dot(moon_pos, rd) : 0.0);
+		vec2 mu = vec2(sun_visible ? dot(sun_pos, rd) : 0.0, moon_visible ? dot(moon_pos, rd) : 0.0);
 		vec3 mph = ((calc_mie_phase(mu.x, cumulus_partial_mie_phase) * atm_sun_mie_tint.rgb) +
 			calc_mie_phase(mu.y, cumulus_partial_mie_phase) * am);
 
@@ -353,7 +354,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	angle_mult.w = clamp_to_unit(-sun_pos.y + 0.60);
 
 	// Atmosphere
-	vec2 mu = vec2(dot(sun_pos, world_pos), moon_visible ? dot(moon_pos, world_pos) : 0.0);
+	vec2 mu = vec2(sun_visible ? dot(sun_pos, world_pos) : 0.0, moon_visible ? dot(moon_pos, world_pos) : 0.0);
 	float sr, sm;
 	calc_simple_optical_depth(world_pos.y + atm_level_params.z - horizon_offset, sr, sm, atm_level_params.xy);
 
@@ -365,7 +366,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	col.rgb += scatter.rgb;
 
 	// Sun
-	vec3 sun_disk = calc_disk_mask(world_pos, sun_pos, sun_disk_size) * sun_disk_color.rgb * scatter.rgb;
+	vec3 sun_disk = sun_visible ? calc_disk_mask(world_pos, sun_pos, sun_disk_size) * sun_disk_color.rgb * scatter.rgb : vec3(0.0);
 	sun_disk *= sun_disk_intensity;
 
 	// Moon
@@ -374,9 +375,13 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	vec3 moon_normal = normalize(world_pos * moon_intersect - moon_pos);
 
 	float moon_ndotl = clamp(dot(moon_normal, sun_pos), 0.0, 1.0);
-	vec3 moon_tex = sample_moon_texture(moon_normal);
-	vec3 moon_output = moon_visible ? moon_mask * moon_ndotl * exp2(1.0) * moon_tex * moon_color.rgb : vec3(0.0);
-	float moonMask = moon_visible ? (1.0 - moon_mask) : 1.0;
+	vec3 moon_output = vec3(0.0);
+	float moonMask = 1.0;
+	if (moon_visible) {
+		vec3 moon_tex = sample_moon_texture(moon_normal);
+		moon_output = moon_mask * moon_ndotl * exp2(1.0) * moon_tex * moon_color.rgb;
+		moonMask = (1.0 - moon_mask);
+	}
 
 	// Deep space
 
@@ -396,18 +401,23 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	vec2 deep_space_uv = calc_equirect_uv(normalize(final_alignment));
 
 	// Star map
-	vec3 deep_space_background = starmap_visible ? textureLod(starmap_texture, deep_space_uv, 0.0).rgb : vec3(0.0);
-	deep_space_background *= starmap_color.rgb;
-	deep_space_background = adjust_contrast(deep_space_background, starmap_color.a);
+	vec3 deep_space_background = vec3(0.0);
+	if (starmap_visible) {
+		deep_space_background = textureLod(starmap_texture, deep_space_uv, 0.0).rgb;
+		deep_space_background *= starmap_color.rgb;
+		deep_space_background = adjust_contrast(deep_space_background, starmap_color.a);
+	}
 	vec3 deep_space = deep_space_background.rgb * moonMask + moon_output;
 
 	// Star Field
-	float star_scint = textureLod(noise_tex, deep_space_uv + (p_time * star_scintillation_speed), 0.0).r;
-	star_scint = mix(1.0, star_scint * 1.5, star_scintillation);
-
-	vec3 star_field = starfield_visible ? textureLod(star_field_texture, deep_space_uv, 0.0).rgb * star_field_color.rgb : vec3(0.0);
-	star_field = clamp_rgb_to_unit(mix(star_field.rgb, star_field.rgb * star_scint, star_scintillation));
-	star_field = clamp_rgb_to_unit(star_field.rgb);
+	vec3 star_field = vec3(0.0);
+	if (starfield_visible) {
+		float star_scint = textureLod(noise_tex, deep_space_uv + (p_time * star_scintillation_speed), 0.0).r;
+		star_scint = mix(1.0, star_scint * 1.5, star_scintillation);
+		star_field = textureLod(star_field_texture, deep_space_uv, 0.0).rgb * star_field_color.rgb;
+		star_field = clamp_rgb_to_unit(mix(star_field.rgb, star_field.rgb * star_scint, star_scintillation));
+		star_field = clamp_rgb_to_unit(star_field.rgb);
+	}
 	//deep_space.rgb -= clamp_to_unit(star_field.r * 10.0);
 	deep_space.rgb += star_field.rgb * moonMask;
 	deep_space.rgb *= angle_mult.z;

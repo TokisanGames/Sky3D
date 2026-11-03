@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2025 Cory Petkovsek and Contributors
+# Copyright (c) 2023-2026 Cory Petkovsek and Contributors
 # Copyright (c) 2021 J. Cuellar
 
 ## Sky3D is an Atmosphereic Day/Night Cycle for Godot 4.
@@ -126,7 +126,7 @@ func show_sky() -> void:
 		return tod.game_time_enabled if tod else game_time_enabled
 
 
-## A readable game date string, eg. '2025-01-01'. Alias for [member TimeOfDay.game_date].
+## A readable game date string, eg. '2026-01-01'. Alias for [member TimeOfDay.game_date].
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var game_date: String = "" :
 	get:

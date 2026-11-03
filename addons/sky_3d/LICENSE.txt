@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2023-2025 Cory Petkovsek and Contributors
+Copyright (c) 2023-2026 Cory Petkovsek and Contributors
 Copyright (c) 2021 J. Cuéllar
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

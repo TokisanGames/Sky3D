@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2025 Cory Petkovsek and Contributors
+// Copyright (c) 2023-2026 Cory Petkovsek and Contributors
 // Copyright (c) 2021 J. Cuellar
 
 const float INV_PI      = 1. / PI;

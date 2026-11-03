@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2025 Cory Petkovsek and Contributors
+# Copyright (c) 2023-2026 Cory Petkovsek and Contributors
 # Copyright (c) 2021 J. Cuellar
 
 ## TimeOfDay is a component of [Sky3D].
@@ -140,7 +140,7 @@ var _sky_dome: SkyDome
 ## Syncronize all of Sky3D with your system clock for a realtime sky, time, and date.
 @export var system_sync: bool = false
 
-## A readable game date string, eg. '2025-01-01'. Alias for [member TimeOfDay.game_date].
+## A readable game date string, eg. '2026-01-01'. Alias for [member TimeOfDay.game_date].
 @export_custom(PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY) 
 var game_date: String = "" :
 	get():
@@ -213,7 +213,7 @@ var game_time: String = "" :
 
 
 ## The current year
-@export_range(-9999,9999) var year: int = 2025 :
+@export_range(-9999,9999) var year: int = 2026 :
 	set(value):
 		if year != value:
 			year = value

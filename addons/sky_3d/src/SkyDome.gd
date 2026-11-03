@@ -978,7 +978,7 @@ func _check_cloud_processing() -> void:
 
 
 ## Blends the sky's atmospheric color into cirrus clouds.
-@export_range(0.0, 1.0, 0.001) var cirrus_sky_tint_fade: float = 0.5 :
+@export_range(0.0, 1.0, 0.001) var cirrus_sky_tint_fade: float = 0.0 :
 	set(value):
 		cirrus_sky_tint_fade = value
 		if is_scene_built:
@@ -1131,6 +1131,14 @@ func _check_cloud_processing() -> void:
 		if is_scene_built:
 			var partial: Vector3 = ScatterLib.get_partial_mie_phase(cumulus_mie_anisotropy)
 			cumulus_material.set_shader_parameter("cumulus_partial_mie_phase", partial)
+
+
+## Blends the sky's atmospheric color into cumulus clouds.
+@export_range(0.0, 1.0, 0.001) var cumulus_sky_tint_fade: float = 0.0 :
+	set(value):
+		cumulus_sky_tint_fade = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("cumulus_sky_tint_fade", cumulus_sky_tint_fade)
 
 
 #####################

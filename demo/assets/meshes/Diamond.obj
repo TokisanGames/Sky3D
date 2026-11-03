@@ -1,6 +1,5 @@
 # Blender v2.90.0 OBJ File: ''
 # www.blender.org
-mtllib Diamond.mtl
 o dobj_dmesh.001
 v 1.000024 0.000000 -0.000003
 v 0.995208 0.013456 -0.098020

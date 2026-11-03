@@ -1,6 +1,5 @@
 # Blender v2.90.0 OBJ File: ''
 # www.blender.org
-mtllib Teaport.mtl
 o Teapot
 v 0.402802 2.400000 1.447220
 v 0.393820 2.454688 1.414948

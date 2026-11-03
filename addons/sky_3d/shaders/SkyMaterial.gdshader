@@ -300,7 +300,9 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 	vec3 n; float tt;
 	if (ray_sphere_intersect(500., ro, rd, tt, n)) {
 		float march_step = float(CUMULUS_STEP) * cumulus_thickness;
-		vec3 dir_step = rd / rd.y * march_step;
+		// Avoid division by zero for exactly horizontal rays.
+		float ry = abs(rd.y) < 0.0001 ? (rd.y >= 0.0 ? 0.0001 : -0.0001) : rd.y;
+		vec3 dir_step = rd / ry * march_step;
 		vec3 pos = n * cumulus_size;
 
 		vec2 mu = vec2(dot(sun_pos, rd), dot(moon_pos, rd));

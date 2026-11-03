@@ -1,6 +1,5 @@
 # Blender v2.90.0 OBJ File: ''
 # www.blender.org
-mtllib Triangle.mtl
 o Triangle_Triangle.001
 v 0.000024 0.000000 -0.576993
 v 0.500024 0.000000 0.289033

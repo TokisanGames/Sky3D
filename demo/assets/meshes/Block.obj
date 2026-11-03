@@ -1,6 +1,5 @@
 # Blender v2.90.0 OBJ File: ''
 # www.blender.org
-mtllib Block.mtl
 o Beam
 v 0.250024 0.500000 -1.000003
 v -0.249976 0.500000 -1.000003

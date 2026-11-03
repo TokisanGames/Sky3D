@@ -1,6 +1,5 @@
 # Blender v2.90.0 OBJ File: ''
 # www.blender.org
-mtllib Torus.mtl
 o Torus
 v 1.250000 0.000000 0.000000
 v 1.239306 0.000000 -0.163158

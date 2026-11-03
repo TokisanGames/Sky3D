@@ -1,6 +1,5 @@
 # Blender v2.90.0 OBJ File: ''
 # www.blender.org
-mtllib KnotTorus.mtl
 o TorusKnot
 v -0.646841 -0.312184 -0.166793
 v -0.630968 -0.100176 -0.525292

@@ -1,6 +1,5 @@
 # Blender v2.90.0 OBJ File: ''
 # www.blender.org
-mtllib Gear.mtl
 o Gear
 v 0.510024 0.020000 -0.000003
 v 0.420024 0.020000 -0.000003

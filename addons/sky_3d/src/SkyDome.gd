@@ -21,6 +21,8 @@ const CUMULUS_TEXTURE_2D_PATH: String = "res://addons/sky_3d/assets/textures/noi
 const CUMULUS_TEXTURE_3D_PATH: String = "res://addons/sky_3d/assets/resources/cumulus_noise_3d.tres"
 const SUN_MOON_CURVE: Curve = preload("res://addons/sky_3d/assets/resources/SunMoonLightFade.tres")
 const DAY_NIGHT_TRANSITION_ANGLE: float = deg_to_rad(90)  # Horizon
+const SKY_SHADER_SUBPASS: Shader = preload("res://addons/sky_3d/shaders/SkyMaterial.gdshader")
+const SKY_SHADER_COMPAT: Shader = preload("res://addons/sky_3d/shaders/SkyMaterial-Compat.gdshader")
 
 var is_scene_built: bool = false
 var fog_mesh: MeshInstance3D
@@ -110,7 +112,7 @@ func _build_scene() -> void:
 	sky_material.set_shader_parameter("star_scintillation_offset", _scint_offset)
 	sky_material.set_shader_parameter("clouds_in_reflections", clouds_in_reflections)
 	_update_fog_celestial_visibility()
-	_apply_quarter_res_mode()
+	_apply_sky_shader_variant()
 
 
 #####################
@@ -974,27 +976,34 @@ func _update_processing() -> void:
 			set_process(false)
 
 
-## Pushes the quarter-res preference to the shader.
+## Assigns the sky shader variant matching the active renderer and pushes the
+## quarter-res preference to it.
 ##
-## Which renderers can honor it is decided here, not in the shader: only Forward+ and Mobile
-## run the quarter-res sky subpass. Compatibility never fills the quarter-res buffer — the
-## engine reports QUARTER_RES_COLOR as opaque black there, which blended at alpha 1 would
-## blank the whole sky — so the effective uniform is the preference ANDed with renderer
-## support. On Compatibility clouds march in the main pass at full resolution, as before the
-## subpass split. This stays a uniform-only push: no runtime shader variants, and nothing
-## here mutates the scene's Sky material.
+## Two wrapper shaders share one body (SkyCode.gdshaderinc) and differ only in
+## their render_mode and whether they read QUARTER_RES_COLOR:
 ##
-## Renderer-support note: the QUARTER_RES_COLOR read compiles on every renderer only from
-## Godot 4.7 (upstream 7282051 fixed the GLES3 sky template's undefined sampler macros).
-## Inside this version range the uniform gate is all that is needed; shipping support for
-## Compatibility on older Godot is handled by matching split shaders (see performance-clouds
-## branch / SkyDome's variant assignment there).
-func _apply_quarter_res_mode() -> void:
+## - SkyMaterial.gdshader (Forward+ and Mobile): the engine fills QUARTER_RES_COLOR
+##   in the quarter-res sky subpass and the main pass samples it — 1/16th the march
+##   pixels for the same clouds.
+## - SkyMaterial-Compat.gdshader (Compatibility): GLES3 never runs the subpass, and
+##   on Godot 4.5.x its sky template cannot even compile a QUARTER_RES_COLOR read
+##   (the template's sampler block references Vulkan-only sampler macros that GLES3
+##   never defines). This variant omits both and always marches clouds at full
+##   resolution, as before the subpass split.
+##
+## Both wrappers are real files on disk, so assigning one keeps the scene's Sky
+## material connected to actual shader resources — no runtime-generated variants
+## are ever serialized into the scene.
+##
+## The rendering method is fixed for the lifetime of the process, so reading it here is enough.
+func _apply_sky_shader_variant() -> void:
 	if not is_scene_built:
 		return
 	var method: String = RenderingServer.get_current_rendering_method()
-	var supported: bool = method == "forward_plus" or method == "mobile"
-	sky_material.set_shader_parameter("cumulus_quarter_res", cumulus_quarter_res and supported)
+	var shader: Shader = SKY_SHADER_SUBPASS if method == "forward_plus" or method == "mobile" else SKY_SHADER_COMPAT
+	if sky_material.shader != shader:
+		sky_material.shader = shader
+	sky_material.set_shader_parameter("cumulus_quarter_res", cumulus_quarter_res)
 
 
 #####################
@@ -1102,7 +1111,7 @@ func _apply_quarter_res_mode() -> void:
 @export var cumulus_quarter_res: bool = true :
 	set(value):
 		cumulus_quarter_res = value
-		_apply_quarter_res_mode()
+		_apply_sky_shader_variant()
 
 
 ## Generates cumulus cloud patterns using the 3D noise texture if enabled, otherwise the 2D textures.

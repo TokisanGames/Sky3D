@@ -15,9 +15,9 @@ uniform float fog_falloff = 3.;
 uniform float fog_start = 0.;
 uniform float fog_end = 1000.;
 uniform vec3 sun_direction = vec3(.25, -.25, .25);
-uniform bool sun_visible = true;
+uniform bool sun_enabled = true;
 uniform vec3 moon_direction = vec3(.45, -.25, .45);
-uniform bool moon_visible = true;
+uniform bool moon_enabled = true;
 
 uniform float atm_darkness = .5;
 uniform float atm_sun_intensity = 30.;
@@ -114,7 +114,7 @@ void fragment() {
 	vec3 view_pos = clip_pos.xyz / clip_pos.w;
 	vec4 world_pos_hom = INV_VIEW_MATRIX * vec4(view_pos, 1.0);
 	vec3 world_position = world_pos_hom.xyz / world_pos_hom.w;
-	
+
 	// Ray from camera to world intersection point
 	vec3 intersection_ray = world_position - CAMERA_POSITION_WORLD;
 	// Unit ray direction
@@ -131,10 +131,10 @@ void fragment() {
 	float plane_hit = float(ray_direction.y < 0.) *
 					  float(plane_distance > 0.) *
 					  float(plane_distance < original_distance);
-	
+
 	// Use final distance or t_plane distance Final distance: mix original vs plane distance
 	float ray_distance = mix(original_distance, plane_distance, plane_hit);
-	
+
 	// Capped world position
 	//world_position = CAMERA_POSITION_WORLD + ray_distance * ray_direction;
 
@@ -143,8 +143,8 @@ void fragment() {
 	fog_factor *= calc_fog_distance(ray_distance);
 
 	vec2 mu = vec2(
-		sun_visible ? dot(sun_direction, ray_direction) : 0.0,
-		moon_visible ? dot(moon_direction, ray_direction) : 0.0
+		sun_enabled ? dot(sun_direction, ray_direction) : 0.0,
+		moon_enabled ? dot(moon_direction, ray_direction) : 0.0
 	);
 	float sr, sm;
 	calc_simple_optical_depth(ray_direction.y + atm_level_params.z, sr, sm, atm_level_params.xy);

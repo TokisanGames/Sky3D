@@ -5,7 +5,7 @@ shader_type sky;
 render_mode use_debanding;
 
 group_uniforms general;
-uniform bool sky_visible = true;
+uniform bool sky_enabled = true;
 uniform vec2 color_correction = vec2(0.0, 1.0);
 uniform vec4 ground_color: source_color = vec4(0.3, 0.3, 0.3, 1.0);
 uniform float horizon_offset = 0.0;
@@ -26,7 +26,7 @@ uniform vec4 sun_light_color: source_color = vec4(1.0);
 uniform vec4 sun_disk_color: source_color = vec4(0.996, 0.541, 0.14, 1.0);
 uniform float sun_disk_intensity = 2.0;
 uniform float sun_disk_size = 0.015;
-uniform bool sun_visible = true;
+uniform bool sun_enabled = true;
 
 group_uniforms sun_mie;
 uniform vec4 atm_sun_mie_tint: source_color = vec4(1.0);
@@ -40,7 +40,7 @@ uniform vec3 moon_texture_alignment = vec3(7.0, 1.4, 4.8);
 uniform bool moon_texture_flip_u;
 uniform bool moon_texture_flip_v;
 uniform float moon_size = 0.07;
-uniform bool moon_visible = true;
+uniform bool moon_enabled = true;
 
 group_uniforms moon_mie;
 uniform vec4 atm_moon_mie_tint: source_color = vec4(0.137, 0.184, 0.292, 1.0);
@@ -56,7 +56,7 @@ uniform vec3 starmap_alignment = vec3(2.68288, -0.25891, 0.40101);
 uniform float star_rotation_offset = 9.38899;
 uniform float star_rotation = 0.0; // For simulating Earth rotation.
 uniform float star_tilt = 0.0; // For tilting the sky according to observer latitude in radians. (90° - latitude)
-uniform bool starmap_visible = true;
+uniform bool starmap_enabled = true;
 
 group_uniforms star_field;
 uniform vec4 star_field_color: source_color = vec4(1.0);
@@ -64,7 +64,7 @@ uniform sampler2D star_field_texture: source_color;
 uniform float star_scintillation = 0.75;
 uniform float star_scintillation_speed = 0.01;
 uniform sampler2D noise_tex: source_color;
-uniform bool starfield_visible = true;
+uniform bool starfield_enabled = true;
 
 /* Sky alignment values for a star map that is in galactic coordinates. Works for most star maps.
 X: 2.6555
@@ -80,7 +80,7 @@ group_uniforms clouds;
 uniform vec4 clouds_night_color: source_color = vec4(0.09, 0.094, 0.129, 1.0);
 
 group_uniforms cirrus_clouds;
-uniform bool cirrus_visible = true;
+uniform bool cirrus_enabled = true;
 uniform float cirrus_coverage = 0.5;
 uniform float cirrus_thickness = 10.0;
 uniform float cirrus_size = 1.0;
@@ -93,7 +93,7 @@ uniform vec2 cirrus_position1 = vec2(0.0);
 uniform vec2 cirrus_position2 = vec2(0.0);
 
 group_uniforms cumulus_clouds;
-uniform bool cumulus_visible = true;
+uniform bool cumulus_enabled = true;
 uniform bool cumulus_hq_noise = false;
 uniform int cumulus_steps_zenith = 10;
 uniform int cumulus_steps_horizon = 10;
@@ -320,7 +320,7 @@ vec4 render_cumulus_clouds(vec3 ro, vec3 rd, float am, vec3 sun_pos, vec3 moon_p
 		vec3 dir_step = rd / ry * march_step;
 		vec3 pos = n * cumulus_size;
 
-		vec2 mu = vec2(sun_visible ? dot(sun_pos, rd) : 0.0, moon_visible ? dot(moon_pos, rd) : 0.0);
+		vec2 mu = vec2(sun_enabled ? dot(sun_pos, rd) : 0.0, moon_enabled ? dot(moon_pos, rd) : 0.0);
 		vec3 mph = ((calc_mie_phase(mu.x, cumulus_partial_mie_phase) * atm_sun_mie_tint.rgb) +
 			calc_mie_phase(mu.y, cumulus_partial_mie_phase) * am);
 
@@ -354,7 +354,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	angle_mult.w = clamp_to_unit(-sun_pos.y + 0.60);
 
 	// Atmosphere
-	vec2 mu = vec2(sun_visible ? dot(sun_pos, world_pos) : 0.0, moon_visible ? dot(moon_pos, world_pos) : 0.0);
+	vec2 mu = vec2(sun_enabled ? dot(sun_pos, world_pos) : 0.0, moon_enabled ? dot(moon_pos, world_pos) : 0.0);
 	float sr, sm;
 	calc_simple_optical_depth(world_pos.y + atm_level_params.z - horizon_offset, sr, sm, atm_level_params.xy);
 
@@ -366,7 +366,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	col.rgb += scatter.rgb;
 
 	// Sun
-	vec3 sun_disk = sun_visible ? calc_disk_mask(world_pos, sun_pos, sun_disk_size) * sun_disk_color.rgb * scatter.rgb : vec3(0.0);
+	vec3 sun_disk = sun_enabled ? calc_disk_mask(world_pos, sun_pos, sun_disk_size) * sun_disk_color.rgb * scatter.rgb : vec3(0.0);
 	sun_disk *= sun_disk_intensity;
 
 	// Moon
@@ -377,7 +377,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	float moon_ndotl = clamp(dot(moon_normal, sun_pos), 0.0, 1.0);
 	vec3 moon_output = vec3(0.0);
 	float moonMask = 1.0;
-	if (moon_visible) {
+	if (moon_enabled) {
 		vec3 moon_tex = sample_moon_texture(moon_normal);
 		moon_output = moon_mask * moon_ndotl * exp2(1.0) * moon_tex * moon_color.rgb;
 		moonMask = (1.0 - moon_mask);
@@ -402,7 +402,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 
 	// Star map
 	vec3 deep_space_background = vec3(0.0);
-	if (starmap_visible) {
+	if (starmap_enabled) {
 		deep_space_background = textureLod(starmap_texture, deep_space_uv, 0.0).rgb;
 		deep_space_background *= starmap_color.rgb;
 		deep_space_background = adjust_contrast(deep_space_background, starmap_color.a);
@@ -411,7 +411,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 
 	// Star Field
 	vec3 star_field = vec3(0.0);
-	if (starfield_visible) {
+	if (starfield_enabled) {
 		float star_scint = textureLod(noise_tex, deep_space_uv + (p_time * star_scintillation_speed), 0.0).r;
 		star_scint = mix(1.0, star_scint * 1.5, star_scintillation);
 		star_field = textureLod(star_field_texture, deep_space_uv, 0.0).rgb * star_field_color.rgb;
@@ -424,7 +424,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 	col.rgb += sun_disk.rgb + deep_space.rgb * horizonBlend;
 
 	// Clouds
-	if (cirrus_visible) {
+	if (cirrus_enabled) {
 		vec4 cirrus_clouds = render_cirrus_clouds(clouds_pos);
 		cirrus_clouds.a = clamp_to_unit(cirrus_clouds.a);
 		vec3 cloud_tint = sun_light_color.rgb;
@@ -434,7 +434,7 @@ vec3 render_sky(vec3 world_pos, vec3 clouds_pos, vec3 sun_pos, vec3 moon_pos, fl
 		col.rgb = mix(col.rgb, cirrus_clouds.rgb + mix(vec3(0.0), scatter, cirrus_sky_tint_fade), cirrus_clouds.a);
 	}
 
-	if (cumulus_visible) {
+	if (cumulus_enabled) {
 		vec4 cumulus_clouds = render_cumulus_clouds(vec3(0.0), clouds_pos, angle_mult.z, sun_pos, moon_pos);
 		cumulus_clouds.a = clamp_to_unit(cumulus_clouds.a);
 		vec3 cloud_tint = sun_light_color.rgb;
@@ -520,7 +520,7 @@ void sky() {
 	vec3 sun_pos = LIGHT0_DIRECTION; // Redefined from now-deprecated _sun_direction.
 	vec3 moon_pos = LIGHT1_DIRECTION; // Redefined from now-deprecated _moon_direction.
 
-	if (sky_visible) {
+	if (sky_enabled) {
 		col = render_sky(world_pos, clouds_pos, sun_pos, moon_pos, current_time);
 	}
 

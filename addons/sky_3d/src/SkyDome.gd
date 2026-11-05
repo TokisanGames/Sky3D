@@ -27,13 +27,14 @@ var fog_mesh: MeshInstance3D
 var sky_material: ShaderMaterial
 var cumulus_material: Material
 var fog_material: Material
+
 ## Matches [member Sky3D.sky_enabled]. When false the dome stops rendering the sky
 ## and hides the sun and moon from the fog shader.
-var sky_visible: bool = true :
+var sky_enabled: bool = true :
 	set(value):
-		sky_visible = value
+		sky_enabled = value
 		if is_scene_built:
-			sky_material.set_shader_parameter("sky_visible", value)
+			sky_material.set_shader_parameter("sky_enabled", value)
 			_update_fog_celestial_visibility()
 
 
@@ -105,7 +106,7 @@ func _build_scene() -> void:
 			set(prop_name, get(prop_name))  # Triggers setter with current value
 
 	# Non-editor state set before the scene built (eg. Sky3D.sky_enabled at load)
-	sky_material.set_shader_parameter("sky_visible", sky_visible)
+	sky_material.set_shader_parameter("sky_enabled", sky_enabled)
 	_update_fog_celestial_visibility()
 
 
@@ -125,13 +126,13 @@ func _process(delta: float) -> void:
 ## If [method process_method] is set to manual, this function can be called with the number of 
 ## seconds passed to update the position of the clouds.
 func process_tick(delta: float) -> void:
-	if not is_scene_built or not (cirrus_visible or cumulus_visible):
+	if not is_scene_built or not (cirrus_enabled or cumulus_enabled):
 		return
 	var position_delta: Vector2 = _cloud_velocity * delta
-	if cumulus_visible:
+	if cumulus_enabled:
 		_cumulus_position += position_delta
 		sky_material.set_shader_parameter("cumulus_position", _cumulus_position)
-	if cirrus_visible:
+	if cirrus_enabled:
 		position_delta *= cirrus_speed_reduction
 		_cirrus_position1 = (_cirrus_position1 + position_delta).posmod(1.0)
 		_cirrus_position2 = (_cirrus_position2 + position_delta).posmod(1.0)
@@ -192,11 +193,11 @@ func _update_color_correction() -> void:
 
 ## Shows the sun (disk and glow) in the sky and fog, and enables its DirectionalLight3D energy
 ## and shadow casting. Useful for overcast days or overcast nights.
-@export var sun_visible: bool = true :
+@export var sun_enabled: bool = true :
 	set(value):
-		sun_visible = value
+		sun_enabled = value
 		if is_scene_built:
-			sky_material.set_shader_parameter("sun_visible", value)
+			sky_material.set_shader_parameter("sun_enabled", value)
 			_update_fog_celestial_visibility()
 		if value:
 			_update_sun_coords()
@@ -345,7 +346,7 @@ func _update_sun_light_color() -> void:
 
 
 func _update_sun_light_energy() -> void:
-	if not _sun_light_node or not sun_visible:
+	if not _sun_light_node or not sun_enabled:
 		return
 	
 	# Light energy should depend on how much of the sun disk is visible.
@@ -368,11 +369,11 @@ func _update_sun_light_energy() -> void:
 
 
 ## Shows the moon in the sky and fog. Also enables the MoonLight node's directional light.
-@export var moon_visible: bool = true :
+@export var moon_enabled: bool = true :
 	set(value):
-		moon_visible = value
+		moon_enabled = value
 		if is_scene_built:
-			sky_material.set_shader_parameter("moon_visible", value)
+			sky_material.set_shader_parameter("moon_enabled", value)
 			_update_fog_celestial_visibility()
 		if value:
 			update_moon_coords()
@@ -537,7 +538,7 @@ func _update_moon_light_color() -> void:
 
 
 func _update_moon_light_energy() -> void:
-	if not _moon_light_node or not moon_visible:
+	if not _moon_light_node or not moon_enabled:
 		return
 	
 	var l: float = lerpf(0.0, moon_light_energy, _moon_light_altitude_mult)
@@ -753,18 +754,18 @@ func _update_beta_mie() -> void:
 
 
 ## Set the fog's visibility
-@export var fog_visible: bool = true: 
+@export var fog_enabled: bool = true: 
 	set(value):
-		fog_visible = value
+		fog_enabled = value
 		if is_scene_built:
-			fog_mesh.visible = fog_visible
+			fog_mesh.visible = fog_enabled
 
 
 ## Syncs the fog shader's sun and moon visibility with the sky's visibility state and toggles.
 func _update_fog_celestial_visibility() -> void:
 	if is_scene_built:
-		fog_material.set_shader_parameter("sun_visible", sun_visible and sky_visible)
-		fog_material.set_shader_parameter("moon_visible", moon_visible and sky_visible)
+		fog_material.set_shader_parameter("sun_enabled", sun_enabled and sky_enabled)
+		fog_material.set_shader_parameter("moon_enabled", moon_enabled and sky_enabled)
 
 
 ## Set the fog's density
@@ -941,7 +942,7 @@ enum { PHYSICS_PROCESS, PROCESS, MANUAL }
 
 
 func _check_cloud_processing() -> void:
-	var enable: bool = is_scene_built and (cirrus_visible or cumulus_visible) and wind_speed != 0.0
+	var enable: bool = is_scene_built and (cirrus_enabled or cumulus_enabled) and wind_speed != 0.0
 	_cloud_velocity = _cloud_direction * _cloud_speed
 	match process_method:
 		PHYSICS_PROCESS:
@@ -963,11 +964,11 @@ func _check_cloud_processing() -> void:
 
 
 ## Toggles visibility of high-altitude cirrus clouds.
-@export var cirrus_visible: bool = true :
+@export var cirrus_enabled: bool = true :
 	set(value):
-		cirrus_visible = value
+		cirrus_enabled = value
 		if is_scene_built:
-			sky_material.set_shader_parameter("cirrus_visible", value)
+			sky_material.set_shader_parameter("cirrus_enabled", value)
 			_check_cloud_processing()
 
 
@@ -1044,11 +1045,11 @@ func _check_cloud_processing() -> void:
 
 
 ## Toggles visibility of the low-altitude cumulus clouds.
-@export var cumulus_visible: bool = true :
+@export var cumulus_enabled: bool = true :
 	set(value):
-		cumulus_visible = value
+		cumulus_enabled = value
 		if is_scene_built:
-			sky_material.set_shader_parameter("cumulus_visible", value)
+			sky_material.set_shader_parameter("cumulus_enabled", value)
 			_check_cloud_processing()
 
 
@@ -1200,19 +1201,19 @@ func _check_cloud_processing() -> void:
 
 
 ## Shows the distant star map (galaxy, nebulas).
-@export var starmap_visible: bool = true :
+@export var starmap_enabled: bool = true :
 	set(value):
-		starmap_visible = value
+		starmap_enabled = value
 		if sky_material:
-			sky_material.set_shader_parameter("starmap_visible", value)
+			sky_material.set_shader_parameter("starmap_enabled", value)
 
 
 ## Shows the nearby starfield (points of light).
-@export var starfield_visible: bool = true :
+@export var starfield_enabled: bool = true :
 	set(value):
-		starfield_visible = value
+		starfield_enabled = value
 		if sky_material:
-			sky_material.set_shader_parameter("starfield_visible", value)
+			sky_material.set_shader_parameter("starfield_enabled", value)
 
 
 ## For aligning the star map texture map to known reference points. See [annotation SkyDome.show_alignment_lasers].

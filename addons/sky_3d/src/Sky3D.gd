@@ -54,9 +54,9 @@ var sky_material: ShaderMaterial
 	set(value):
 		sky_enabled = value
 		if sky:
-			sky.sky_visible = value
+			sky.sky_enabled = value
 		elif sky_material:
-			sky_material.set_shader_parameter("sky_visible", value)
+			sky_material.set_shader_parameter("sky_enabled", value)
 
 
 ## Enables both 2D and cumulus cloud layers.
@@ -64,8 +64,8 @@ var sky_material: ShaderMaterial
 	set(value):
 		clouds_enabled = value
 		if sky:
-			sky.cumulus_visible = value
-			sky.cirrus_visible = value
+			sky.cumulus_enabled = value
+			sky.cirrus_enabled = value
 
 
 ## Enables the screen space fog shader. Sky3D also works with the other two fog methods built into Godot.
@@ -73,53 +73,48 @@ var sky_material: ShaderMaterial
 	set(value):
 		fog_enabled = value
 		if sky:
-			sky.fog_visible = value
-
-
-## Enables the Sun and Moon [DirectionalLight3D]s.
-@export var lights_enabled: bool = true :
-	set(value):
-		lights_enabled = value
-		if sky:
-			sky.sun_light_enabled = value
-			sky.moon_light_enabled = value
+			sky.fog_enabled = value
 
 
 ## Enables the sun disk and light energy in the sky and fog. Disabling is useful for overcast days.
-## Alias for [member SkyDome.sun_visible].
+## Alias for [member SkyDome.sun_enabled].
 @export var sun_enabled: bool = true :
 	set(value):
+		sun_enabled = value
 		if sky:
-			sky.sun_visible = value
+			sky.sun_enabled = value
 	get:
-		return sky.sun_visible if sky else sun_enabled
+		return sky.sun_enabled if sky else sun_enabled
 
 
 ## Enables the moon disk and light energy in the sky and fog. Disabling is useful for overcast nights.
-## Alias for [member SkyDome.moon_visible].
+## Alias for [member SkyDome.moon_enabled].
 @export var moon_enabled: bool = true :
 	set(value):
+		moon_enabled = value
 		if sky:
-			sky.moon_visible = value
+			sky.moon_enabled = value
 	get:
-		return sky.moon_visible if sky else moon_enabled
+		return sky.moon_enabled if sky else moon_enabled
 
 
 ## Enables the star field and the star map.
-## Aliases for [member SkyDome.starfield_visible] and [member SkyDome.starmap_visible].
+## Aliases for [member SkyDome.starfield_enabled] and [member SkyDome.starmap_enabled].
 @export var stars_enabled: bool = true :
 	set(value):
+		stars_enabled = value
 		if sky:
-			sky.starfield_visible = value
-			sky.starmap_visible = value
+			sky.starfield_enabled = value
+			sky.starmap_enabled = value
 	get:
-		return sky.starfield_visible if sky else stars_enabled
+		return sky.starfield_enabled if sky else stars_enabled
 
 
 ## Disables rendering of sky, fog, and lights.
 func hide_sky() -> void:
 	sky_enabled = false
-	lights_enabled = false
+	sun_enabled = false
+	moon_enabled = false
 	fog_enabled = false
 	clouds_enabled = false
 
@@ -127,7 +122,8 @@ func hide_sky() -> void:
 ## Enables rendering of sky, fog, and lights.
 func show_sky() -> void:
 	sky_enabled = true
-	lights_enabled = true
+	sun_enabled = true
+	moon_enabled = true
 	fog_enabled = true
 	clouds_enabled = true
 
@@ -568,7 +564,9 @@ func _initialize() -> void:
 
 	# Re-apply only the state that the dome does not persist
 	sky_enabled = sky_enabled
-	lights_enabled = lights_enabled
+	sun_enabled = sun_enabled
+	moon_enabled = moon_enabled
+	stars_enabled = stars_enabled
 
 
 func _enter_tree() -> void:

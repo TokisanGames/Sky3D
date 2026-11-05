@@ -190,6 +190,10 @@ func _update_color_correction() -> void:
 
 @export_group("Sun")
 
+var _sun_light_node: DirectionalLight3D
+var _sun_transform: Transform3D
+var _day: bool = true
+
 
 ## Shows the sun (disk and glow) in the sky and fog, and enables its DirectionalLight3D energy
 ## and shadow casting. Useful for overcast days or overcast nights.
@@ -223,99 +227,8 @@ func _update_color_correction() -> void:
 		_update_sun_coords()
 
 
-## Size of the sun disk.
-@export_range(0.0, 0.5, 0.001) var sun_disk_size: float = 0.02 :
-	set(value):
-		sun_disk_size = value
-		if is_scene_built:
-			sky_material.set_shader_parameter("sun_disk_size", sun_disk_size)
-
-
-## Controls the horizontal direction of the sun in degrees. 0° is north, 90° is east, 180° is south, -90° is west.
-@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_azimuth: float = deg_to_rad(0.) :
-	set(value):
-		sun_azimuth = value
-		_update_sun_coords()
-
-
-## Controls the vertical angle of the sun in degrees. 0° is zenith (straight up), 90° is horizon, 180° is nadir (straight down).
-@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_altitude: float = deg_to_rad(-27.387) :
-	set(value):
-		sun_altitude = value
-		_update_sun_coords()
-
-
-## The color of the sun disk when visible in the sky.
-@export var sun_disk_color := Color(0.996094, 0.541334, 0.140076) :
-	set(value):
-		sun_disk_color = value
-		if is_scene_built:
-			sky_material.set_shader_parameter("sun_disk_color", sun_disk_color)
-
-
-## Higher values make the sun brighter.
-@export_range(0.0, 100.0) var sun_disk_intensity: float = 30.0 :
-	set(value):
-		sun_disk_intensity = value
-		if is_scene_built:
-			sky_material.set_shader_parameter("sun_disk_intensity", sun_disk_intensity)
-
-
-var _day: bool = true
-var _sun_transform: Transform3D
-
-
-## The day-night state
-func is_day() -> bool:
-	return _day
-
-
-## Signals when day has changed to night and vice versa.
-func _set_day_state(v: float, threshold: float = DAY_NIGHT_TRANSITION_ANGLE) -> void:
-	if _day == true and abs(v) > threshold:
-		_day = false
-		emit_signal("day_night_changed", _day)
-	elif _day == false and abs(v) <= threshold:
-		_day = true
-		emit_signal("day_night_changed", _day)
-
-
-## Updates sun position and lighting calculations
-func _update_sun_coords() -> void:
-	if !is_scene_built:
-		return
-	
-	if _sun_light_node:
-		_sun_light_node.visible = true
-	
-	# Position the sun on a unit sphere, orienting the light to the origin, mimicking a star orbiting a planet.
-	_sun_transform.origin = TOD_Math.spherical_to_cartesian(sun_altitude, sun_azimuth)
-	# Transform with Vector3.UP to ensure Z-rotation is 0, otherwise shadows will flicker more
-	_sun_transform = _sun_transform.looking_at(Vector3.ZERO, Vector3.UP)
-	
-	fog_material.set_shader_parameter("sun_direction", _sun_transform.origin)
-	if _sun_light_node:
-		_sun_light_node.transform = _sun_transform
-	
-	_set_day_state(sun_altitude)
-	_update_night_intensity()
-	_update_sun_light_color()
-	_update_sun_light_energy()
-	_update_moon_light_energy()
-	_update_ambient_color()
-
-
-#####################
-## SunLight
-#####################
-
-# Original sun light (0.984314, 0.843137, 0.788235)
-# Original sun horizon (1.0, 0.384314, 0.243137, 1.0)
-
-var _sun_light_node: DirectionalLight3D
-
-
 ## Color of the sun DirectionalLight3D during midday
+## Original sun light (0.984314, 0.843137, 0.788235)
 @export var sun_light_color := Color.WHITE :
 	set(value):
 		sun_light_color = value
@@ -323,6 +236,7 @@ var _sun_light_node: DirectionalLight3D
 
 
 ## Color of the sun DirectionalLight3D during sunrise and sunset
+## Original sun horizon (1.0, 0.384314, 0.243137, 1.0)
 @export var sun_horizon_light_color := Color(.98, 0.523, 0.294, 1.0) :
 	set(value):
 		sun_horizon_light_color = value
@@ -361,11 +275,100 @@ func _update_sun_light_energy() -> void:
 		_sun_light_node.shadow_enabled = cast_shadows
 
 
+## Size of the sun disk.
+@export_range(0.0, 0.5, 0.001) var sun_disk_size: float = 0.02 :
+	set(value):
+		sun_disk_size = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("sun_disk_size", sun_disk_size)
+
+
+## The color of the sun disk when visible in the sky.
+@export var sun_disk_color := Color(0.996094, 0.541334, 0.140076) :
+	set(value):
+		sun_disk_color = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("sun_disk_color", sun_disk_color)
+
+
+## Higher values make the sun brighter.
+@export_range(0.0, 100.0) var sun_disk_intensity: float = 30.0 :
+	set(value):
+		sun_disk_intensity = value
+		if is_scene_built:
+			sky_material.set_shader_parameter("sun_disk_intensity", sun_disk_intensity)
+
+
+## Controls the horizontal direction of the sun in degrees. 0° is north, 90° is east, 180° is south, -90° is west.
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_azimuth: float = deg_to_rad(0.) :
+	set(value):
+		sun_azimuth = value
+		_update_sun_coords()
+
+
+## Controls the vertical angle of the sun in degrees. 0° is zenith (straight up), 90° is horizon, 180° is nadir (straight down).
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var sun_altitude: float = deg_to_rad(-27.387) :
+	set(value):
+		sun_altitude = value
+		_update_sun_coords()
+
+
+## Updates sun position and lighting calculations
+func _update_sun_coords() -> void:
+	if !is_scene_built:
+		return
+	
+	if _sun_light_node:
+		_sun_light_node.visible = true
+	
+	# Position the sun on a unit sphere, orienting the light to the origin, mimicking a star orbiting a planet.
+	_sun_transform.origin = TOD_Math.spherical_to_cartesian(sun_altitude, sun_azimuth)
+	# Transform with Vector3.UP to ensure Z-rotation is 0, otherwise shadows will flicker more
+	_sun_transform = _sun_transform.looking_at(Vector3.ZERO, Vector3.UP)
+	
+	fog_material.set_shader_parameter("sun_direction", _sun_transform.origin)
+	if _sun_light_node:
+		_sun_light_node.transform = _sun_transform
+	
+	_set_day_state(sun_altitude)
+	_update_night_intensity()
+	_update_sun_light_color()
+	_update_sun_light_energy()
+	_update_moon_light_energy()
+	_update_ambient_color()
+
+
+## Signals when day has changed to night and vice versa.
+func _set_day_state(v: float, threshold: float = DAY_NIGHT_TRANSITION_ANGLE) -> void:
+	if _day == true and abs(v) > threshold:
+		_day = false
+		emit_signal("day_night_changed", _day)
+	elif _day == false and abs(v) <= threshold:
+		_day = true
+		emit_signal("day_night_changed", _day)
+
+
+## The day-night state
+func is_day() -> bool:
+	return _day
+
+
 #####################
 ## Moon
 #####################
 
 @export_group("Moon")
+
+## Reference to the moon DirectionalLight3D
+var _moon_light_node: DirectionalLight3D
+## Used to fade moon light energy from zero at horizon to maximum at zenith. 
+## This value is clamped in the range [0..1].
+var _moon_light_altitude_mult: float = 0.0
+## The moon's Transform3D
+var _moon_transform: Transform3D
+## Celestial North Pole direction, set by [TimeOfDay] based on observer latitude.
+## Used to derive the parallactic angle rotation for the moon texture.
+var celestial_north_pole: Vector3 = Vector3.LEFT
 
 
 ## Shows the moon in the sky and fog. Also enables the MoonLight node's directional light.
@@ -399,18 +402,41 @@ func _update_sun_light_energy() -> void:
 		update_moon_coords()
 
 
-## Horizontal angle of the moon
-@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_azimuth: float = deg_to_rad(5.) :
+## Color of the moon DirectionalLight3D
+@export var moon_light_color := Color(0.572549, 0.776471, 0.956863, 1.0) :
 	set(value):
-		moon_azimuth = value
-		update_moon_coords()
+		moon_light_color = value
+		_update_moon_light_color()
 
 
-## Vertical angle of the moon
-@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_altitude: float = deg_to_rad(-80.) :
+func _update_moon_light_color() -> void:
+	if not _moon_light_node:
+		return
+	_moon_light_node.light_color = moon_light_color
+
+
+## Maximum light energy of the moon DirectionalLight3D
+@export var moon_light_energy: float = 0.3 :
 	set(value):
-		moon_altitude = value
-		update_moon_coords()
+		moon_light_energy = value
+		_update_moon_light_energy()
+
+
+func _update_moon_light_energy() -> void:
+	if not _moon_light_node or not moon_enabled:
+		return
+	
+	var l: float = lerpf(0.0, moon_light_energy, _moon_light_altitude_mult)
+	l *= _atm_moon_phases_mult()
+	
+	var fade: float = (1.0 - _sun_transform.origin.y) * 0.5
+	_moon_light_node.light_energy = l * SUN_MOON_CURVE.sample_baked(fade)
+	
+	# Cast shadows only when the user has asked for them and the light actually contributes.
+	var cast_shadows: bool = moon_shadows_enabled \
+			and not is_equal_approx(_moon_light_node.light_energy, 0.0)
+	if _moon_light_node.shadow_enabled != cast_shadows:
+		_moon_light_node.shadow_enabled = cast_shadows
 
 
 ## Color tint applied to the moon surface texture.
@@ -457,11 +483,27 @@ func _update_sun_light_energy() -> void:
 		_update_moon_texture()
 
 
-## The moon's Transform3D
-var _moon_transform: Transform3D
-## Celestial North Pole direction, set by [TimeOfDay] based on observer latitude.
-## Used to derive the parallactic angle rotation for the moon texture.
-var celestial_north_pole: Vector3 = Vector3.LEFT
+## Applies moon texture and alignment to shader
+func _update_moon_texture() -> void:
+	if is_scene_built:
+		sky_material.set_shader_parameter("moon_texture", moon_texture)
+		sky_material.set_shader_parameter("moon_texture_alignment", moon_texture_alignment)
+		sky_material.set_shader_parameter("moon_texture_flip_u", flip_moon_texture_u)
+		sky_material.set_shader_parameter("moon_texture_flip_v", flip_moon_texture_v)
+
+
+## Horizontal angle of the moon
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_azimuth: float = deg_to_rad(5.) :
+	set(value):
+		moon_azimuth = value
+		update_moon_coords()
+
+
+## Vertical angle of the moon
+@export_range(-180.0, 180.0, 0.00001, "radians_as_degrees") var moon_altitude: float = deg_to_rad(-80.) :
+	set(value):
+		moon_altitude = value
+		update_moon_coords()
 
 
 ## Updates moon position and lighting calculations
@@ -494,64 +536,6 @@ func update_moon_coords() -> void:
 	_update_moon_light_color()
 	_update_moon_light_energy()
 	_update_ambient_color()
-
-
-## Applies moon texture and alignment to shader
-func _update_moon_texture() -> void:
-	if is_scene_built:
-		sky_material.set_shader_parameter("moon_texture", moon_texture)
-		sky_material.set_shader_parameter("moon_texture_alignment", moon_texture_alignment)
-		sky_material.set_shader_parameter("moon_texture_flip_u", flip_moon_texture_u)
-		sky_material.set_shader_parameter("moon_texture_flip_v", flip_moon_texture_v)
-
-
-#####################
-## MoonLight
-#####################
-
-
-## Color of the moon DirectionalLight3D
-@export var moon_light_color := Color(0.572549, 0.776471, 0.956863, 1.0) :
-	set(value):
-		moon_light_color = value
-		_update_moon_light_color()
-
-
-## Maximum light energy of the moon DirectionalLight3D
-@export var moon_light_energy: float = 0.3 :
-	set(value):
-		moon_light_energy = value
-		_update_moon_light_energy()
-
-
-## Reference to the moon DirectionalLight3D
-var _moon_light_node: DirectionalLight3D
-## Used to fade moon light energy from zero at horizon to maximum at zenith. 
-## This value is clamped in the range [0..1].
-var _moon_light_altitude_mult: float = 0.0
-
-
-func _update_moon_light_color() -> void:
-	if not _moon_light_node:
-		return
-	_moon_light_node.light_color = moon_light_color
-
-
-func _update_moon_light_energy() -> void:
-	if not _moon_light_node or not moon_enabled:
-		return
-	
-	var l: float = lerpf(0.0, moon_light_energy, _moon_light_altitude_mult)
-	l *= _atm_moon_phases_mult()
-	
-	var fade: float = (1.0 - _sun_transform.origin.y) * 0.5
-	_moon_light_node.light_energy = l * SUN_MOON_CURVE.sample_baked(fade)
-	
-	# Cast shadows only when the user has asked for them and the light actually contributes.
-	var cast_shadows: bool = moon_shadows_enabled \
-			and not is_equal_approx(_moon_light_node.light_energy, 0.0)
-	if _moon_light_node.shadow_enabled != cast_shadows:
-		_moon_light_node.shadow_enabled = cast_shadows
 
 
 #####################

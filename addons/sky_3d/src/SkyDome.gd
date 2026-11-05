@@ -205,6 +205,23 @@ func _update_color_correction() -> void:
 			_sun_light_node.shadow_enabled = false
 
 
+## Enables MoonLight DirectionalLight3D shadow casting
+@export var sun_shadows_enabled: bool = true :
+	set(value):
+		sun_shadows_enabled = value
+		if is_scene_built:
+			_update_sun_light_energy()
+
+
+## NodePath to the sun DirectionalLight3D node
+@export_node_path("DirectionalLight3D") var sun_light_path := NodePath("../SunLight") :
+	set(value):
+		sun_light_path = value
+		if sun_light_path:
+			_sun_light_node = get_node_or_null(sun_light_path) as DirectionalLight3D
+		_update_sun_coords()
+
+
 ## Size of the sun disk.
 @export_range(0.0, 0.5, 0.001) var sun_disk_size: float = 0.02 :
 	set(value):
@@ -245,15 +262,6 @@ func _update_color_correction() -> void:
 
 var _day: bool = true
 var _sun_transform: Transform3D
-
-var sun_light_enabled: bool = true :
-	set(value):
-		sun_light_enabled = value
-		if value:
-			_update_sun_coords()
-		else:
-			_sun_light_node.light_energy = 0.0
-			_sun_light_node.shadow_enabled = false
 
 
 ## The day-night state
@@ -327,15 +335,6 @@ var _sun_light_node: DirectionalLight3D
 		_update_sun_light_energy()
 
 
-## NodePath to the sun DirectionalLight3D node
-@export_node_path("DirectionalLight3D") var sun_light_path := NodePath("../SunLight") :
-	set(value):
-		sun_light_path = value
-		if sun_light_path:
-			_sun_light_node = get_node_or_null(sun_light_path) as DirectionalLight3D
-		_update_sun_coords()
-
-
 func _update_sun_light_color() -> void:
 	if not _sun_light_node:
 		return
@@ -346,7 +345,7 @@ func _update_sun_light_color() -> void:
 
 
 func _update_sun_light_energy() -> void:
-	if not _sun_light_node or not sun_light_enabled or not sun_visible:
+	if not _sun_light_node or not sun_visible:
 		return
 	
 	# Light energy should depend on how much of the sun disk is visible.
@@ -354,10 +353,11 @@ func _update_sun_light_energy() -> void:
 	var sun_light_factor: float = clampf((y + sun_disk_size) / (2.0 * sun_disk_size), 0., 1.);
 	_sun_light_node.light_energy = lerpf(0.0, sun_light_energy, sun_light_factor)
 	
-	if is_equal_approx(_sun_light_node.light_energy, 0.0) and _sun_light_node.shadow_enabled:
-		_sun_light_node.shadow_enabled = false
-	elif _sun_light_node.light_energy > 0.0 and not _sun_light_node.shadow_enabled:
-		_sun_light_node.shadow_enabled = true
+	# Cast shadows only when the user has asked for them and the light actually contributes.
+	var cast_shadows: bool = sun_shadows_enabled \
+			and not is_equal_approx(_sun_light_node.light_energy, 0.0)
+	if _sun_light_node.shadow_enabled != cast_shadows:
+		_sun_light_node.shadow_enabled = cast_shadows
 
 
 #####################
@@ -379,6 +379,23 @@ func _update_sun_light_energy() -> void:
 		elif _moon_light_node:
 			_moon_light_node.light_energy = 0.0
 			_moon_light_node.shadow_enabled = false
+
+
+## Enables MoonLight DirectionalLight3D shadow casting
+@export var moon_shadows_enabled: bool = true :
+	set(value):
+		moon_shadows_enabled = value
+		if is_scene_built:
+			_update_moon_light_energy()
+
+
+## NodePath to the moon DirectionalLight3D node
+@export_node_path("DirectionalLight3D") var moon_light_path := NodePath("../MoonLight") :
+	set(value):
+		moon_light_path = value
+		if moon_light_path:
+			_moon_light_node = get_node_or_null(moon_light_path) as DirectionalLight3D
+		update_moon_coords()
 
 
 ## Horizontal angle of the moon
@@ -444,16 +461,6 @@ var _moon_transform: Transform3D
 ## Celestial North Pole direction, set by [TimeOfDay] based on observer latitude.
 ## Used to derive the parallactic angle rotation for the moon texture.
 var celestial_north_pole: Vector3 = Vector3.LEFT
-## We disable the moon DirectionalLight3D by setting [member DirectionalLight3D.shadow_enabled] 
-## and [member DirectionalLight3D.light_energy] to false and zero respectively
-var moon_light_enabled: bool = true:
-	set(value):
-		moon_light_enabled = value
-		if value:
-			update_moon_coords()
-		else:
-			_moon_light_node.light_energy = 0.0
-			_moon_light_node.shadow_enabled = false
 
 
 ## Updates moon position and lighting calculations
@@ -530,7 +537,7 @@ func _update_moon_light_color() -> void:
 
 
 func _update_moon_light_energy() -> void:
-	if not _moon_light_node or not moon_light_enabled or not moon_visible:
+	if not _moon_light_node or not moon_visible:
 		return
 	
 	var l: float = lerpf(0.0, moon_light_energy, _moon_light_altitude_mult)
@@ -539,19 +546,11 @@ func _update_moon_light_energy() -> void:
 	var fade: float = (1.0 - _sun_transform.origin.y) * 0.5
 	_moon_light_node.light_energy = l * SUN_MOON_CURVE.sample_baked(fade)
 	
-	if is_equal_approx(_moon_light_node.light_energy, 0.0) and _moon_light_node.shadow_enabled:
-		_moon_light_node.shadow_enabled = false
-	elif _moon_light_node.light_energy > 0.0 and not _moon_light_node.shadow_enabled:
-		_moon_light_node.shadow_enabled = true
-
-
-## NodePath to the moon DirectionalLight3D node
-@export_node_path("DirectionalLight3D") var moon_light_path := NodePath("../MoonLight") :
-	set(value):
-		moon_light_path = value
-		if moon_light_path:
-			_moon_light_node = get_node_or_null(moon_light_path) as DirectionalLight3D
-		update_moon_coords()
+	# Cast shadows only when the user has asked for them and the light actually contributes.
+	var cast_shadows: bool = moon_shadows_enabled \
+			and not is_equal_approx(_moon_light_node.light_energy, 0.0)
+	if _moon_light_node.shadow_enabled != cast_shadows:
+		_moon_light_node.shadow_enabled = cast_shadows
 
 
 #####################

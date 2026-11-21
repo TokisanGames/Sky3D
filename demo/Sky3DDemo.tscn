@@ -137,7 +137,6 @@ shader_parameter/atm_sun_mie_intensity = 1.0
 shader_parameter/atm_sun_partial_mie_phase = Vector3(0.36, 1.64, 1.6)
 shader_parameter/moon_color = Color(1, 1, 1, 1)
 shader_parameter/moon_texture = ExtResource("6_v8wrf")
-shader_parameter/moon_texture_alignment = Vector3(7, 1.4, 4.8)
 shader_parameter/moon_texture_flip_u = false
 shader_parameter/moon_texture_flip_v = false
 shader_parameter/moon_size = 0.07
@@ -149,15 +148,12 @@ shader_parameter/starmap_color = Color(0.709804, 0.709804, 0.709804, 0.854902)
 shader_parameter/starmap_texture = ExtResource("5_0j4pb")
 shader_parameter/starmap_flip_u = false
 shader_parameter/starmap_flip_v = false
-shader_parameter/starmap_alignment = Vector3(2.68288, -0.25891, 0.40101)
-shader_parameter/star_rotation_offset = 9.38899
-shader_parameter/star_rotation = -9.706971894901294
-shader_parameter/star_tilt = -1.2915436464758039
 shader_parameter/starmap_enabled = true
 shader_parameter/star_field_color = Color(1, 1, 1, 1)
 shader_parameter/star_field_texture = ExtResource("8_humls")
 shader_parameter/star_scintillation = 0.75
 shader_parameter/star_scintillation_speed = 0.01
+shader_parameter/star_scintillation_offset = 0.09383333333333288
 shader_parameter/noise_tex = ExtResource("7_d0ed4")
 shader_parameter/starfield_enabled = true
 shader_parameter/clouds_night_color = Color(0.090196, 0.094118, 0.129412, 1)
@@ -187,6 +183,8 @@ shader_parameter/cumulus_absorption = 2.0
 shader_parameter/cumulus_mie_intensity = 1.0
 shader_parameter/cumulus_partial_mie_phase = Vector3(0.957564, 1.042436, 0.412)
 shader_parameter/cumulus_sky_tint_fade = 0.0
+shader_parameter/cumulus_quarter_res = true
+shader_parameter/clouds_in_reflections = true
 shader_parameter/cumulus_position = Vector2(5.2897124, 1.943048e-05)
 shader_parameter/show_azimuthal_grid = false
 shader_parameter/azimuthal_grid_color = Color(0.87058824, 0.72156864, 0.5294118, 1)
@@ -198,6 +196,7 @@ shader_parameter/moon_matrix = Basis(-0.5858857, 0.77900034, 0.22337475, 0.37286
 
 [sub_resource type="Sky" id="Sky_0j4pb"]
 sky_material = SubResource("ShaderMaterial_v8wrf")
+radiance_size = 2
 
 [sub_resource type="Environment" id="Environment_1g8sw"]
 background_mode = 2
